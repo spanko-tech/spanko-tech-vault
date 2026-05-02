@@ -15,6 +15,12 @@ Icon?
 .obsidian/workspace*
 .obsidian/updates.json
 
+# Plugin binaries — users install these themselves via Obsidian
+# data.json (plugin settings) is kept intentionally
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/styles.css
+.obsidian/plugins/*/manifest.json
+
 # Common plugin caches
 .obsidian/plugins/*/cache/
 .obsidian/plugins/*/.cache/

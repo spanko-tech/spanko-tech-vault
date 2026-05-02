@@ -13,17 +13,51 @@ Other plugins include [Excalidraw](https://github.com/zsviczian/obsidian-excalid
 
 ## Systems TLDR
 
-| System | TLDR |
-|---|---|
-| **Cogito** | A Zettelkasten-style knowledge base for notes, media, and MOCs — promoting ideas from Stub → Draft → Solid → Reference. |
-| **Finances** | Track income, expenses, and budgets with multi-currency support. |
-| **Food** | Log daily meals and track calorie and macro targets (kcal, protein, carbs). |
-| **Growth** | Engineering self-management hub — skills tree, brag doc, reviews, ADRs, and postmortems. |
-| **Habits** | Track daily and weekly habits with visual heatmaps and progress statistics. |
-| **Infrastructure** | Inventory and monitor servers, services, and domains with health-check linting. |
-| **Issues** | Kanban issue tracker linked to Projects and Releases with priority and category filtering. |
-| **Job Search** | Manage job applications through a kanban workflow with document and status tracking. |
-| **Leetcode** | Algorithm practice log with automated problem import and per-topic progress tracking. |
-| **Projects** | Lifecycle management for projects from Idea through Active/Paused to Shipped/Archived. |
-| **Releases** | Plan and document software releases with version tracking, highlights, and changelogs. |
-| **Resources** | Curated reference library for tools, links, and assets with use-case notes and lint checks. |
+| System             | TLDR                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| **Cogito**         | A knowledge base for notes, media, and MOCs - promoting ideas from Stub → Draft → Solid → Reference.     |
+| **Finances**       | Track income, expenses, and budgets with multi-currency support.                                         |
+| **Food**           | Log daily meals and track calorie and macro targets (kcal, protein, carbs).                              |
+| **Growth**         | Growth oriented hub - skills tree, brag doc, reviews, ADRs, and postmortems.                             |
+| **Habits**         | Track daily and weekly habits with visual heatmaps and progress statistics.                              |
+| **Infrastructure** | Keep track of servers, services, and networks, with lint checks to catch incomplete or outdated entries. |
+| **Issues**         | Kanban issue tracker linked to Projects and Releases with priority and category filtering.               |
+| **Job Search**     | Manage job applications through a kanban workflow with document and status tracking.                     |
+| **Leetcode**       | Algorithm practice log with automated problem import and per-topic progress tracking.                    |
+| **Projects**       | Lifecycle management for projects from Idea through Active/Paused to Shipped/Archived.                   |
+| **Releases**       | Plan and document software releases with version tracking, highlights, and changelogs.                   |
+| **Resources**      | Curated reference library for tools, links, and assets with use-case notes and lint checks.              |
+
+## Why This Exists
+
+There are better dedicated apps for most of these things - Jira does issues better, almost any food tracking app does food tracking better, and so on. I know.
+
+What I wanted was everything in one place, and that place happens to be Obsidian. These are the systems I actually use daily and that made sense to centralize. Some will feel like overkill for what they do, and that's fine - use what fits, skip what doesn't.
+
+The Infrastructure system especially is very purpose-made. It is tailored to directly support the kind of setup I want to create.
+
+I also wanted to force myself to keep the vault in good shape, many of the systems include lint checkers that notify you of issues - missing sections, missing frontmatter, missing content etc.
+
+## Finances - Currency
+
+The system defaults to **CZK** as the display currency. Individual income and expense entries can be logged in CZK, EUR, or USD - everything converts to CZK for totals.
+
+Exchange rates are adjustable directly in the Finances dashboard (EUR rate and USD rate inputs at the bottom). They're stored in the `Finances.md` frontmatter so they persist.
+
+To swap CZK out entirely for a different base currency, you'll need to edit `Systems/Finances/Finances.md` — search for `CZK` and update the display labels and the rates object (`{ CZK: 1, EUR: eurRate, USD: usdRate }`).
+
+## Setup
+
+Install the plugins listed in `community-plugins.json` via Obsidian's community plugin browser. Plugin settings (including Templater's scripts path and folder templates) are already committed to `.obsidian`, so nothing else needs configuring once the plugins are installed.
+
+Plugins to install:
+- [Datacore](https://github.com/blacksmithgu/datacore) — required, powers everything
+- [Templater](https://github.com/SilentVoid13/Templater) — required for LeetCode and FatSecret scrapers
+- [Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) — optional, used in Cogito for drawings
+- [Folder Notes](https://github.com/LostPaul/obsidian-folder-notes) — optional, used for folder-level dashboards
+
+That's it. Open the vault, install the plugins, done.
+
+## System Ideas
+
+If you have an idea for a system that would fit well here, feel free to [open an issue](../../issues) on GitHub. No promises, but I do look at them — and if it's something I'd actually use, it'll probably end up here eventually.
