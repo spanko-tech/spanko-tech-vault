@@ -1,5 +1,5 @@
 ---
-tags: [fabrica/issue]
+tags: [system/issues/issue]
 project: My New Vault
 status: Todo
 priority: High

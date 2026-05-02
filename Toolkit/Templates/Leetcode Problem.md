@@ -1,4 +1,4 @@
-﻿<%* 
+<%* 
 let url = await tp.system.prompt("Paste the LeetCode problem URL:");
 url = tp.user.leetcode_scrapper.cleanUrl(url);
 let problem = await tp.user.leetcode_scrapper.scrapProblem(tp, url);
@@ -14,7 +14,7 @@ problem.content = await tp.user.image_downloader(tp, problem.content);
 problem.content = tp.obsidian.htmlToMarkdown(problem.content);
 %>---
 aliases: [LC-<% problem.questionFrontendId %>]
-tags: [fabrica/leetcode, fabrica/leetcode/difficulty/<% problem.difficulty.toLowerCase() %> <%* problem.topicTags.forEach(tag => {const tagName = tag.name.toLowerCase().replace(/\s+/g, '-'); tR += `, fabrica/leetcode/topic/${tagName}`;}); %>]
+tags: [system/leetcode/problem, system/leetcode/difficulty/<% problem.difficulty.toLowerCase() %> <%* problem.topicTags.forEach(tag => {const tagName = tag.name.toLowerCase().replace(/\s+/g, '-'); tR += `, system/leetcode/topic/${tagName}`;}); %>]
 link: <% url %>
 id: <% problem.questionFrontendId %>
 difficulty: <% problem.difficulty %>
@@ -22,7 +22,9 @@ status: To Do
 topics: [<%* problem.topicTags.forEach(tag => {tR += `${tag.name}, `;}); %>]
 ---
 # <% note_name %>
-[View on LeetCode](<% url %>)
+
+> [!abstract] <%* tR += problem.difficulty === "Easy" ? "🟢" : problem.difficulty === "Medium" ? "🟡" : "🔴"; %> <% problem.difficulty %> · <%* tR += problem.topicTags.map(t => t.name).join(" · "); %>
+> [🔗 View on LeetCode](<% url %>)
 
 <% problem.content %>
 

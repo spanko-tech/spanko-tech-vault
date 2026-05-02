@@ -1,7 +1,7 @@
-﻿---
+---
 aliases: []
 tags:
-  - anima/system
+  - system/jobs
   - datacore/dashboard
 ---
 
@@ -76,7 +76,7 @@ async function setStatus(app, newStatus) {
 }
 
 return function View() {
-    const apps = dc.useQuery(V.q("anima/app", "Systems/Job Search"));
+    const apps = dc.useQuery(V.q("system/jobs/application", "Systems/Job Search"));
 
     const [tab, setTab] = dc.useState("Pipeline");
     const [showArchived, setShowArchived] = dc.useState(false);
@@ -128,7 +128,7 @@ return function View() {
             <NewForm
                 label="+ New Application"
                 folder='Systems/Job Search'
-                tag={["anima/app"]}
+                tag={["system/jobs/application"]}
                 body={() => V.bodyTemplate(["Role", "Why interesting", "Compensation", "Contacts", "Follow-ups", "Notes"])}
                 fields={[
                     { name: "name", placeholder: "Company — Role", width: "260px" },

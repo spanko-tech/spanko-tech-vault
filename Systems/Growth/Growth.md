@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/growth-system
+  - system/growth
 ---
 
 # Growth
@@ -16,11 +16,11 @@ const SKILL_LEVELS = ["Novice", "Advanced Beginner", "Competent", "Proficient", 
 const ADR_STATUS   = ["Proposed", "Accepted", "Superseded", "Rejected"];
 
 return function View() {
-    const skills  = dc.useQuery(V.q("fabrica/skill",      "Systems/Growth"));
-    const brags   = dc.useQuery(V.q("fabrica/brag",       "Systems/Growth"));
-    const reviews = dc.useQuery(V.q("fabrica/review",     "Systems/Growth"));
-    const adrs    = dc.useQuery(V.q("fabrica/adr",        "Systems/Growth"));
-    const pms     = dc.useQuery(V.q("fabrica/postmortem", "Systems/Growth"));
+    const skills  = dc.useQuery(V.q("system/growth/skill",      "Systems/Growth"));
+    const brags   = dc.useQuery(V.q("system/growth/brag",       "Systems/Growth"));
+    const reviews = dc.useQuery(V.q("system/growth/review",     "Systems/Growth"));
+    const adrs    = dc.useQuery(V.q("system/growth/adr",        "Systems/Growth"));
+    const pms     = dc.useQuery(V.q("system/growth/postmortem", "Systems/Growth"));
     const [tab, setTab] = dc.useState("Skills");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
 
@@ -44,7 +44,7 @@ return function View() {
 
             {tab === "Skills" ? (
                 <div>
-                    <NewForm label="+ Skill" folder='Systems/Growth/Skills' tag={["fabrica/skill"]}
+                    <NewForm label="+ Skill" folder='Systems/Growth/Skills' tag={["system/growth/skill"]}
                         fields={[
                             { name: "name", placeholder: "Skill name", width: "220px" },
                             { name: "level", type: "select", options: SKILL_LEVELS, default: "Competent" }
@@ -62,7 +62,7 @@ return function View() {
 
             {tab === "Brags" ? (
                 <div>
-                    <NewForm label="+ Brag" folder='Systems/Growth/Brag' tag={["fabrica/brag"]}
+                    <NewForm label="+ Brag" folder='Systems/Growth/Brag' tag={["system/growth/brag"]}
                         body={() => V.bodyTemplate(["What", "Impact", "Skills demonstrated"])}
                         fields={[
                             { name: "name", placeholder: "Win title", width: "260px" },
@@ -80,7 +80,7 @@ return function View() {
 
             {tab === "Reviews" ? (
                 <div>
-                    <NewForm label="+ Review" folder='Systems/Growth/Reviews' tag={["fabrica/review"]}
+                    <NewForm label="+ Review" folder='Systems/Growth/Reviews' tag={["system/growth/review"]}
                         body={() => V.bodyTemplate(["Went well", "Stuck on", "Struggled with", "Patterns", "Next"])}
                         fields={[{ name: "name", placeholder: "Review title (e.g. 2026-04 monthly)", width: "300px" }]}
                     />
@@ -92,7 +92,7 @@ return function View() {
 
             {tab === "ADRs" ? (
                 <div>
-                    <NewForm label="+ ADR" folder='Systems/Growth/ADRs' tag={["fabrica/adr"]}
+                    <NewForm label="+ ADR" folder='Systems/Growth/ADRs' tag={["system/growth/adr"]}
                         body={() => V.bodyTemplate(["Context", "Decision", "Consequences", "Alternatives considered"])}
                         fields={[
                             { name: "name", placeholder: "ADR-XXX — Title", width: "300px" },
@@ -111,7 +111,7 @@ return function View() {
 
             {tab === "Postmortems" ? (
                 <div>
-                    <NewForm label="+ Postmortem" folder='Systems/Growth/Postmortems' tag={["fabrica/postmortem"]}
+                    <NewForm label="+ Postmortem" folder='Systems/Growth/Postmortems' tag={["system/growth/postmortem"]}
                         body={() => V.bodyTemplate(["Summary", "Timeline", "Root cause", "5 whys", "Action items"])}
                         fields={[
                             { name: "name", placeholder: "Incident title", width: "300px" },

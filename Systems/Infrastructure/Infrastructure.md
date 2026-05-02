@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/infra-system
+  - system/infrastructure
 ---
 
 # Infrastructure
@@ -230,9 +230,9 @@ function buildServerGraph(server, services, networks) {
 }
 
 return function View() {
-    const servers  = dc.useQuery('@page and #fabrica/server  and path("Systems/Infrastructure")');
-    const services = dc.useQuery('@page and #fabrica/service and path("Systems/Infrastructure")');
-    const networks = dc.useQuery('@page and #fabrica/network and path("Systems/Infrastructure")');
+    const servers  = dc.useQuery('@page and #system/infrastructure/server  and path("Systems/Infrastructure")');
+    const services = dc.useQuery('@page and #system/infrastructure/service and path("Systems/Infrastructure")');
+    const networks = dc.useQuery('@page and #system/infrastructure/network and path("Systems/Infrastructure")');
 
     const serverNames  = dc.useMemo(() => servers.map(s => s.$name), [servers]);
     const networkNames = dc.useMemo(() => networks.map(n => n.$name), [networks]);
@@ -315,7 +315,7 @@ return function View() {
     return (
         <div>
             <h3>Servers ({servers.length})</h3>
-            <NewForm label="+ Server" folder='Systems/Infrastructure/Servers' tag={["fabrica/server"]}
+            <NewForm label="+ Server" folder='Systems/Infrastructure/Servers' tag={["system/infrastructure/server"]}
                 fields={[
                     { name: "name", placeholder: "Hostname", width: "200px" },
                     { name: "role", placeholder: "Role", width: "160px" },
@@ -337,7 +337,7 @@ return function View() {
                 ]} />
 
             <h3>Services ({filteredServices.length}{filtersActive ? ` of ${services.length}` : ""})</h3>
-            <NewForm label="+ Service" folder='Systems/Infrastructure/Services' tag={["fabrica/service"]}
+            <NewForm label="+ Service" folder='Systems/Infrastructure/Services' tag={["system/infrastructure/service"]}
                 initialValues={{
                     server: serverFilter !== "all" ? serverFilter : undefined,
                     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -405,7 +405,7 @@ return function View() {
                 ]} />
 
             <h3>Networks ({networks.length})</h3>
-            <NewForm label="+ Network" folder='Systems/Infrastructure/Networks' tag={["fabrica/network"]}
+            <NewForm label="+ Network" folder='Systems/Infrastructure/Networks' tag={["system/infrastructure/network"]}
                 fields={[
                     { name: "name", placeholder: "Network name", width: "200px" },
                     { name: "type", type: "select", options: NETWORK_TYPES, default: "docker-subnet" },

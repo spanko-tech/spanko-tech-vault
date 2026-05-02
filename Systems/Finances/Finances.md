@@ -1,7 +1,7 @@
-﻿---
+---
 aliases: []
 tags:
-  - finances/system
+  - system/finances
   - datacore/dashboard
 EURExchangeRate: 25
 USDExchangeRate: 22
@@ -68,8 +68,8 @@ return function View() {
     const currentYear   = new Date().getFullYear();
     const rates = { CZK: 1, EUR: eurRate, USD: usdRate };
 
-    const incomes  = dc.useQuery('@page and #finances/income  and path("Systems/Finances")');
-    const expenses = dc.useQuery('@page and #finances/expense and path("Systems/Finances")');
+    const incomes  = dc.useQuery('@page and #system/finances/income  and path("Systems/Finances")');
+    const expenses = dc.useQuery('@page and #system/finances/expense and path("Systems/Finances")');
 
     const data = dc.useMemo(() => {
         const transactions = [];
@@ -305,7 +305,7 @@ return function View() {
                 <NewForm
                     label="+ New Income"
                     folder='Systems/Finances/Income'
-                    tag="finances/income"
+                    tag="system/finances/income"
                     initialValues={{ frequency: txFreqFilter !== "All" ? txFreqFilter : undefined }}
                     fields={[
                         { name: "name", label: "Income name" },
@@ -321,7 +321,7 @@ return function View() {
                     label="+ New Expense"
                     buttonClass=""
                     folder='Systems/Finances/Expenses'
-                    tag="finances/expense"
+                    tag="system/finances/expense"
                     initialValues={{ frequency: txFreqFilter !== "All" ? txFreqFilter : undefined }}
                     fields={[
                         { name: "name", label: "Expense name" },

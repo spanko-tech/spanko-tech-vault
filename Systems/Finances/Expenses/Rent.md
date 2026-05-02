@@ -5,7 +5,7 @@ category: Life
 frequency: Monthly
 status: Active
 start_date: "20.1.2026"
-tags: [finances/expense]
+tags: [system/finances/expense]
 created: "2026-05-02"
 ---
 

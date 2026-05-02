@@ -5,7 +5,7 @@ status: In Progress
 date: 2026-05-10
 breaking: Yes
 tags:
-  - fabrica/release
+  - system/releases/release
 created: 2026-05-02
 ---
 

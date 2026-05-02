@@ -1,5 +1,5 @@
 ---
-tags: [food/ingredient]
+tags: [system/food/ingredient]
 serving_size: 1
 unit: piece
 kcal_per_serving: 65

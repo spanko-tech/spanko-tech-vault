@@ -10,7 +10,7 @@ port_public: "6000"
 port_internal: "6000"
 status: Stable
 tags:
-  - fabrica/service
+  - system/infrastructure/service
 created: 2026-05-02
 ip:
 ---

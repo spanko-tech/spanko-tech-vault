@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/issues-system
+  - system/issues
 ---
 
 # Issues
@@ -99,7 +99,7 @@ function NewIssueForm({ projects, releases, defaultProject, defaultRelease = "" 
                     await ensureFolder(folder);
                     const fmLines = [
                         "---",
-                        "tags: [fabrica/issue]",
+                        "tags: [system/issues/issue]",
                         `project: ${project}`,
                         `status: ${status}`,
                         `priority: ${priority}`
@@ -205,9 +205,9 @@ function IssueCard({ issue, extra, releases = [], hideReleased = false }) {
 }
 
 return function View() {
-    const allIssues = dc.useQuery(V.q("fabrica/issue",   "Systems/Issues"));
-    const projects  = dc.useQuery(V.q("fabrica/project", "Systems/Projects"));
-    const releases  = dc.useQuery(V.q("fabrica/release", "Systems/Releases"));
+    const allIssues = dc.useQuery(V.q("system/issues/issue",   "Systems/Issues"));
+    const projects  = dc.useQuery(V.q("system/projects/project", "Systems/Projects"));
+    const releases  = dc.useQuery(V.q("system/releases/release", "Systems/Releases"));
     const [issueProject, setIssueProject]     = dc.useState("All");
     const [issueRelease, setIssueRelease]     = dc.useState("All");
     const [issueCategoryFilter, setIssueCategoryFilter] = dc.useState("All");

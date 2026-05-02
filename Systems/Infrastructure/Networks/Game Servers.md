@@ -2,7 +2,7 @@
 type: docker-subnet
 subnet: "172.16.10.0/24"
 server: Server 1
-tags: [fabrica/network]
+tags: [system/infrastructure/network]
 created: "2026-05-02"
 ---
 

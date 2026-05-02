@@ -4,7 +4,7 @@ type: Book
 author: Nic Barker
 topic: Data Oriented Design
 source: "https://www.youtube.com/watch?v=WwkuAqObplU"
-tags: [cogito/media]
+tags: [system/cogito/media]
 created: "2026-05-02"
 ---
 

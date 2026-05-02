@@ -1,4 +1,8 @@
 ---
+aliases: []
+tags:
+  - system/food
+  - datacore/dashboard
 goal_kcal: 2000
 goal_protein: 100
 goal_carbs: 200
@@ -12,20 +16,6 @@ plan_items:
     amount: 1
   - food: "[[Cherry Tomatoes]]"
     amount: 300
----
-﻿---
-aliases: []
-tags:
-  - food/system
-  - datacore/dashboard
-plan_items:
-  - food: "[[Egg (Whole)]]"
-    amount: 1
-goal_kcal: 2300
-goal_protein: 140
-goal_carbs: 270
-goal_fat: 60
-goal_fiber: 35
 efficiency_numerator: protein
 efficiency_denominator: kcal
 efficiency_scale: 100
@@ -61,8 +51,8 @@ return Editor;
 `;
 
 return function View() {
-    const recipes     = dc.useQuery('@page and #food/recipe and path("Systems/Food")');
-    const ingredients = dc.useQuery('@page and #food/ingredient and path("Systems/Food")');
+    const recipes     = dc.useQuery('@page and #system/food/recipe and path("Systems/Food")');
+    const ingredients = dc.useQuery('@page and #system/food/ingredient and path("Systems/Food")');
     return (
         <div>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "10px" }}>
@@ -79,7 +69,7 @@ return function View() {
                 <NewForm
                     label="+ New Recipe"
                     folder='Systems/Food/Recipes'
-                    tag="food/recipe"
+                    tag="system/food/recipe"
                     fields={[
                         { name: "name", label: "Recipe" },
                         { name: "meal_type", type: "select", options: ["Snack", "Main Meal"], default: "Main Meal" },
@@ -92,7 +82,7 @@ return function View() {
                     label="+ New Ingredient"
                     buttonClass=""
                     folder='Systems/Food/Items'
-                    tag="food/ingredient"
+                    tag="system/food/ingredient"
                     fields={[
                         { name: "name", label: "Ingredient" },
                         { name: "serving_size", label: "Serving size", type: "number", default: "100", width: "90px" },
@@ -184,8 +174,8 @@ return function View() {
     const effDen   = String(cur.value("efficiency_denominator") ?? "kcal");
     const effScale = Number(cur.value("efficiency_scale") ?? 100) || 100;
 
-    const recipes     = dc.useQuery('@page and #food/recipe and path("Systems/Food")');
-    const ingredients = dc.useQuery('@page and #food/ingredient and path("Systems/Food")');
+    const recipes     = dc.useQuery('@page and #system/food/recipe and path("Systems/Food")');
+    const ingredients = dc.useQuery('@page and #system/food/ingredient and path("Systems/Food")');
 
     const [picked, setPicked] = dc.useState("");
     const [amount, setAmount] = dc.useState("");
@@ -448,8 +438,8 @@ return function View() {
 
     const [search,  setSearch]  = dc.useState("");
 
-    const recipes     = dc.useQuery('@page and #food/recipe and path("Systems/Food")');
-    const ingredients = dc.useQuery('@page and #food/ingredient and path("Systems/Food")');
+    const recipes     = dc.useQuery('@page and #system/food/recipe and path("Systems/Food")');
+    const ingredients = dc.useQuery('@page and #system/food/ingredient and path("Systems/Food")');
 
     const ingByName = dc.useMemo(() => {
         const m = new Map();
@@ -576,7 +566,7 @@ function UnitCell({ page, value }) {
 
 return function View() {
     const [search, setSearch] = dc.useState("");
-    const ings = dc.useQuery('@page and #food/ingredient and path("Systems/Food")');
+    const ings = dc.useQuery('@page and #system/food/ingredient and path("Systems/Food")');
 
     const rows = dc.useMemo(() => {
         const q = search.trim().toLowerCase();

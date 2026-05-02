@@ -4,7 +4,7 @@ category:
 stack: Obsidian, Datacore, Templater
 summary: My New Vault using Datacore
 tags:
-  - fabrica/project
+  - system/projects/project
 created: 2026-05-02
 ---
 
@@ -20,7 +20,7 @@ created: 2026-05-02
 return function() {
     const here = dc.useCurrentPath();
     const name = here.split("/").pop().replace(/\.md$/, "");
-    const all = dc.useQuery('@page and #fabrica/resource');
+    const all = dc.useQuery('@page and #system/resources/resource');
     const mine = all.filter(r => {
         const ps = r.value("projects") ?? [];
         const arr = Array.isArray(ps) ? ps : [ps];

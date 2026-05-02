@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/leetcode-system
+  - system/leetcode
 ---
 
 # Leetcode
@@ -19,8 +19,7 @@ const LEETCODE_FOLDER = "Systems/Leetcode";
 const TEMPLATE_PATH   = "Toolkit/Templates/Leetcode Problem.md";
 
 return function View() {
-    const all = dc.useQuery(V.q("fabrica/leetcode", "Systems/Leetcode"))
-        .filter(p => !p.$path.endsWith("Leetcode.md"));
+    const all = dc.useQuery(V.q("system/leetcode/problem", "Systems/Leetcode"));
     const [statusFilter, setStatusFilter] = dc.useState("All");
     const [diffFilter,   setDiffFilter]   = dc.useState("All");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);

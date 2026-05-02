@@ -1,5 +1,5 @@
 ---
-tags: [food/ingredient]
+tags: [system/food/ingredient]
 serving_size: 100
 unit: g
 kcal_per_serving: 18

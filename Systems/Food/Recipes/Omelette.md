@@ -11,7 +11,7 @@ recipe_items:
 meal_type: Main Meal
 portions: 1
 tags:
-  - food/recipe
+  - system/food/recipe
 created: 2026-05-02
 ---
 

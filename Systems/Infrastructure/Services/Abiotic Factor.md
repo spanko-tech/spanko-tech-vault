@@ -9,7 +9,7 @@ port_public: "7777"
 port_internal: "7777"
 status: Needs Attention
 tags:
-  - fabrica/service
+  - system/infrastructure/service
 created: 2026-05-02
 ---
 

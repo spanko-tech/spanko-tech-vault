@@ -2,7 +2,7 @@
 status: Stub
 domain: Idea
 topic: Software Engineering
-tags: [cogito/note]
+tags: [system/cogito/note]
 created: "2026-05-02"
 ---
 

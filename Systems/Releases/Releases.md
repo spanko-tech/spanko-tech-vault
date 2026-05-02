@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/releases-system
+  - system/releases
 ---
 
 # Releases
@@ -60,9 +60,9 @@ function DateEditor({ item, field }) {
 }
 
 return function View() {
-    const releases = dc.useQuery(V.q("fabrica/release", "Systems/Releases"));
-    const projects = dc.useQuery(V.q("fabrica/project", "Systems/Projects"));
-    const issues   = dc.useQuery(V.q("fabrica/issue",   "Systems/Issues"));
+    const releases = dc.useQuery(V.q("system/releases/release", "Systems/Releases"));
+    const projects = dc.useQuery(V.q("system/projects/project", "Systems/Projects"));
+    const issues   = dc.useQuery(V.q("system/issues/issue",   "Systems/Issues"));
     const [projFilter, setProjFilter]     = dc.useState("All");
     const [statusFilter, setStatusFilter] = dc.useState("All");
     const [relCategoryFilter, setRelCategoryFilter] = dc.useState("All");
@@ -162,7 +162,7 @@ return function View() {
 
     return (
         <div>
-            <NewForm label="+ New Release" folder='Systems/Releases' tag={["fabrica/release"]}
+            <NewForm label="+ New Release" folder='Systems/Releases' tag={["system/releases/release"]}
                 folderFn={vals => `Systems/Releases/${(vals.project || "Unassigned").replace(/[\\/:*?"<>|]/g, "-")}`}
                 body={() => V.bodyTemplate(["Highlights", "Added", "Changed", "Fixed", "Breaking"])}
                 effects={[{ when: "project", set: "version", compute: (proj) => nextVersionFor(proj) }]}

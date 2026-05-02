@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/projects-system
+  - system/projects
 ---
 
 # Projects
@@ -32,7 +32,7 @@ function lintProject(project, body) {
 }
 
 return function View() {
-    const projects = dc.useQuery(V.q("fabrica/project", "Systems/Projects"));
+    const projects = dc.useQuery(V.q("system/projects/project", "Systems/Projects"));
     const [statusFilters, toggleStatus, clearStatusFilters, statusPasses] = useMultiFilter();
     const [categoryFilter, setCategoryFilter] = dc.useState("All");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
@@ -97,10 +97,10 @@ return function View() {
 
     return (
         <div>
-            <NewForm label="+ New Project" folder='Systems/Projects' tag={["fabrica/project"]}
+            <NewForm label="+ New Project" folder='Systems/Projects' tag={["system/projects/project"]}
                 addHeading={true}
                 initialValues={{ status: statusFilters.size === 1 ? Array.from(statusFilters)[0] : undefined }}
-                body={() => "\n## Goals\n\n## Stack\n\n## Resources\n\n```datacorejsx\nreturn function() {\n    const here = dc.useCurrentPath();\n    const name = here.split(\"/\").pop().replace(/\\.md$/, \"\");\n    const all = dc.useQuery('@page and #fabrica/resource');\n    const mine = all.filter(r => {\n        const ps = r.value(\"projects\") ?? [];\n        const arr = Array.isArray(ps) ? ps : [ps];\n        return arr.some(p => String(p).includes(name));\n    });\n    if (!mine.length) return <em>No resources tagged to this project yet.</em>;\n    return <dc.Table paging={20} rows={mine} columns={[\n        { id: \"Resource\", value: r => r.$link },\n        { id: \"Category\", value: r => String(r.value(\"category\") ?? \"\") },\n        { id: \"Vendor\",   value: r => String(r.value(\"vendor\") ?? \"\") }\n    ]} />;\n};\n```\n\n## Notes\n"}
+                body={() => "\n## Goals\n\n## Stack\n\n## Resources\n\n```datacorejsx\nreturn function() {\n    const here = dc.useCurrentPath();\n    const name = here.split(\"/\").pop().replace(/\\.md$/, \"\");\n    const all = dc.useQuery('@page and #system/resources/resource');\n    const mine = all.filter(r => {\n        const ps = r.value(\"projects\") ?? [];\n        const arr = Array.isArray(ps) ? ps : [ps];\n        return arr.some(p => String(p).includes(name));\n    });\n    if (!mine.length) return <em>No resources tagged to this project yet.</em>;\n    return <dc.Table paging={20} rows={mine} columns={[\n        { id: \"Resource\", value: r => r.$link },\n        { id: \"Category\", value: r => String(r.value(\"category\") ?? \"\") },\n        { id: \"Vendor\",   value: r => String(r.value(\"vendor\") ?? \"\") }\n    ]} />;\n};\n```\n\n## Notes\n"}
                 fields={[
                     { name: "name", placeholder: "Project name", width: "260px" },
                     { name: "status", type: "select", options: PROJECT_STATUS, default: "Idea" },

@@ -1,8 +1,8 @@
-﻿---
+---
 aliases: []
 tags:
-  - cogito/system
-  - cogito/index
+  - system/cogito
+  - system/cogito/index
   - datacore/dashboard
 ---
 
@@ -10,11 +10,11 @@ tags:
 
 *Knowledge management system for notes, media consumption, and learning.*
 
-- **Notes** → `Systems/Cogito/Notes/`, tag `#cogito/note` — promote Stub → Draft → Solid → Reference
-- **Inbox** → `Systems/Cogito/Inbox/`, tag `#cogito/inbox` — capture without guilt; weekly skim
+- **Notes** → `Systems/Cogito/Notes/`, tag `#system/cogito/note` — promote Stub → Draft → Solid → Reference
+- **Inbox** → `Systems/Cogito/Inbox/`, tag `#system/cogito/inbox` — capture without guilt; weekly skim
 - **Drawings** → `Systems/Cogito/Drawings/` — Excalidraw lives here
-- **MOCs** → `Systems/Cogito/MOCs/`, tag `#cogito/moc` — maps of content (curated topic indexes)
-- **Media** → `Systems/Cogito/Media/`, tag `#cogito/media` — consumption + reviews; spawns Knowledge notes
+- **MOCs** → `Systems/Cogito/MOCs/`, tag `#system/cogito/moc` — maps of content (curated topic indexes)
+- **Media** → `Systems/Cogito/Media/`, tag `#system/cogito/media` — consumption + reviews; spawns Knowledge notes
 
 | Domain | Voice | Schema |
 |---|---|---|
@@ -453,11 +453,11 @@ function NewDrawingButton({ topics }) {
 // Main view
 // ───────────────────────────────────────────────────────────────────
 return function View() {
-    const notes    = dc.useQuery('@page and #cogito/note  and path("Systems/Cogito/Notes")');
-    const inbox    = dc.useQuery('@page and #cogito/inbox and path("Systems/Cogito/Inbox")');
+    const notes    = dc.useQuery('@page and #system/cogito/note  and path("Systems/Cogito/Notes")');
+    const inbox    = dc.useQuery('@page and #system/cogito/inbox and path("Systems/Cogito/Inbox")');
     const drawings = dc.useQuery('@page and path("Systems/Cogito/Drawings")');
-    const mocs     = dc.useQuery('@page and #cogito/moc   and path("Systems/Cogito/MOCs")');
-    const media    = dc.useQuery('@page and #cogito/media and path("Systems/Cogito/Media")');
+    const mocs     = dc.useQuery('@page and #system/cogito/moc   and path("Systems/Cogito/MOCs")');
+    const media    = dc.useQuery('@page and #system/cogito/media and path("Systems/Cogito/Media")');
 
     const [tab, setTab] = dc.useState("Notes");
 
@@ -768,7 +768,7 @@ return function View() {
                     <NewForm
                         label="+ Quick Capture"
                         folder='Systems/Cogito/Inbox'
-                        tag={["cogito/inbox"]}
+                        tag={["system/cogito/inbox"]}
                         body=""
                         fields={[
                             { name: "name", placeholder: "Quick capture title…", width: "320px" }
@@ -791,7 +791,7 @@ return function View() {
                                                     const file = dc.app.vault.getAbstractFileByPath(i.$path);
                                                     if (!file) return;
                                                     await dc.app.fileManager.processFrontMatter(file, fm => {
-                                                        fm.tags = ["cogito/note"]; fm.status = "Stub";
+                                                        fm.tags = ["system/cogito/note"]; fm.status = "Stub";
                                                         if (!fm.domain) fm.domain = "Basic";
                                                         if (!fm.topic) fm.topic = "";
                                                     });
@@ -838,7 +838,7 @@ return function View() {
                     <NewForm
                         label="+ New Note"
                         folder='Systems/Cogito/Notes'
-                        tag={["cogito/note"]}
+                        tag={["system/cogito/note"]}
                         defaults={{ status: "Stub" }}
                         initialValues={{
                             domain: domainFilter !== "All" ? domainFilter : undefined,
@@ -986,7 +986,7 @@ return function View() {
                     <NewForm
                         label="+ New MOC"
                         folder='Systems/Cogito/MOCs'
-                        tag={["cogito/moc"]}
+                        tag={["system/cogito/moc"]}
                         fields={[
                             { name: "name", label: "MOC title", width: "260px" }
                         ]}
@@ -1022,7 +1022,7 @@ return function View() {
                     <NewForm
                         label="+ New Media"
                         folder='Systems/Cogito/Media'
-                        tag={["cogito/media"]}
+                        tag={["system/cogito/media"]}
                         defaults={{ status: "Backlog" }}
                         body={() => "\n## Takeaways\n\n## Quotes\n\n## Review\n"}
                         fields={[

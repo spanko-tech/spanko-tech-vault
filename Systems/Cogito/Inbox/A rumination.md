@@ -1,5 +1,5 @@
 ---
-tags: [cogito/inbox]
+tags: [system/cogito/inbox]
 created: "2026-05-02"
 ---
 

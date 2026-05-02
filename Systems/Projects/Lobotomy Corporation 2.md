@@ -3,7 +3,7 @@ status: Idea
 category: Games
 stack: "Unity, C#"
 summary: "I really want a sequel to Lobcorp, so Ill make my own"
-tags: [fabrica/project]
+tags: [system/projects/project]
 created: "2026-05-02"
 ---
 
@@ -19,7 +19,7 @@ created: "2026-05-02"
 return function() {
     const here = dc.useCurrentPath();
     const name = here.split("/").pop().replace(/\.md$/, "");
-    const all = dc.useQuery('@page and #fabrica/resource');
+    const all = dc.useQuery('@page and #system/resources/resource');
     const mine = all.filter(r => {
         const ps = r.value("projects") ?? [];
         const arr = Array.isArray(ps) ? ps : [ps];

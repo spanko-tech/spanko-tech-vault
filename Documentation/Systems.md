@@ -9,7 +9,7 @@ This document describes how each system works and what has been extracted from t
 **Purpose**: Daily/weekly habit tracking with heatmap visualization
 
 **How it works**:
-- Each habit is a separate note with `#habit` tag
+- Each habit is a separate note with `#system/habits/habit` tag
 - Daily check-ins stored as `log: ["d_YYYY-MM-DD", ...]` in frontmatter
 - The `d_` prefix prevents YAML from auto-parsing dates as JavaScript Date objects
 - Click habit cells to toggle completion for that day
@@ -27,7 +27,7 @@ This document describes how each system works and what has been extracted from t
 **Purpose**: Hiring pipeline management with document tracking
 
 **How it works**:
-- Notes → `Systems/Job Search/`, tagged `#anima/app`
+- Notes → `Systems/Job Search/`, tagged `#system/jobs/application`
 - One file per opportunity, status drives the kanban
 - PDFs (CV + cover letters) → `Systems/Job Search/Documents/`
 - Document linking via inline dropdowns in dashboard
@@ -45,7 +45,7 @@ This document describes how each system works and what has been extracted from t
 **Purpose**: Income and expense tracking
 
 **How it works**:
-- Separate notes for incomes (`#finances/income`) and expenses (`#finances/expense`)
+- Separate notes for incomes (`#system/finances/income`) and expenses (`#system/finances/expense`)
 - Each note lives in its respective subfolder: `Systems/Finances/Income/` or `Systems/Finances/Expenses/`
 - Status options: Active, Inactive
 - Frequency options: Monthly, Yearly

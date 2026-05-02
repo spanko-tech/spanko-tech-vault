@@ -1,6 +1,6 @@
 ---
 level: Novice
-tags: [fabrica/skill]
+tags: [system/growth/skill]
 created: "2026-05-02"
 ---
 

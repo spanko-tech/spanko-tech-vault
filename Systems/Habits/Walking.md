@@ -6,7 +6,7 @@ log:
   - d_2026-05-02
 frequency: Daily
 tags:
-  - habit
+  - system/habits/habit
 created: 2026-05-02
 ---
 

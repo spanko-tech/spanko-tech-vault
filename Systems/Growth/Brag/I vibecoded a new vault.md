@@ -1,6 +1,6 @@
 ---
 date: "2026-04-28"
-tags: [fabrica/brag]
+tags: [system/growth/brag]
 created: "2026-05-02"
 ---
 

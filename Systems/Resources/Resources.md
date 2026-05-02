@@ -1,6 +1,6 @@
-﻿---
+---
 tags:
-  - fabrica/resources-system
+  - system/resources
   - datacore/dashboard
 ---
 
@@ -37,8 +37,8 @@ function lintResource(resource, body) {
 }
 
 return function View() {
-    const all = dc.useQuery(V.q("fabrica/resource", "Systems/Resources"));
-    const projectPages = dc.useQuery('@page and #fabrica/project');
+    const all = dc.useQuery(V.q("system/resources/resource", "Systems/Resources"));
+    const projectPages = dc.useQuery('@page and #system/projects/project');
 
     const [catFilter, setCatFilter] = dc.useState("All");
     const [projectFilter, setProjectFilter] = dc.useState("All");
@@ -133,7 +133,7 @@ return function View() {
                 issueCounts={resIssueCounts} issueFilter={issueFilter}
                 setIssueFilter={setIssueFilter} icon="🔧" noun="resource" />
 
-            <NewForm label="+ New Resource" folder='Systems/Resources' tag={["fabrica/resource"]}
+            <NewForm label="+ New Resource" folder='Systems/Resources' tag={["system/resources/resource"]}
                 body={() => V.bodyTemplate(["Notes", "Use cases"])}
                 fields={[
                     { name: "name", placeholder: "Resource name", width: "240px" },

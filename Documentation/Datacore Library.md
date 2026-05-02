@@ -28,7 +28,7 @@ const UI = await dc.require("Toolkit/Datacore/UI.jsx");
 const { NewForm, KPIRow, FilterPills, Kanban } = UI;
 
 return function Dashboard() {
-    const items = dc.useArray(dc.useQuery(V.q("fabrica/project", "Systems/Projects")));
+    const items = dc.useArray(dc.useQuery(V.q("system/projects/project", "Systems/Projects")));
     // ...
 };
 ```

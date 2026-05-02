@@ -1,7 +1,7 @@
-﻿---
+---
 aliases: []
 tags:
-  - habits/system
+  - system/habits
   - datacore/dashboard
 ---
 
@@ -87,7 +87,7 @@ function monthGrid(year, month) {
 // NewForm imported from UI.md
 
 return function View() {
-    const habits = dc.useQuery('@page and #habit and path("Systems/Habits")');
+    const habits = dc.useQuery('@page and #system/habits/habit and path("Systems/Habits")');
     const HABIT_SORT_FIELDS = [
         { value: "$name",      label: "Name" },
         { value: "frequency",  label: "Frequency" },
@@ -218,7 +218,7 @@ return function View() {
             <NewForm
                 label="+ New Habit"
                 folder='Systems/Habits'
-                tag="habit"
+                tag="system/habits/habit"
                 fields={[
                     { name: "name", label: "Habit name", width: "200px" },
                     { name: "frequency", label: "Frequency", type: "select", options: ["Daily", "Weekly"], default: "Daily" }
