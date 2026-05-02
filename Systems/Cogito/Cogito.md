@@ -689,7 +689,7 @@ return function View() {
         <div>
             {/* KPI strip — Notes */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                <KpiCard label="Notes"     value={counts.total} onClick={() => { resetFilters(); setTab("Notes"); }} />
+                <KpiCard label="Notes"     value={counts.total} onClick={() => { resetFilters(); setTab("Notes"); }} active={tab === "Notes" && !filtersActive} />
                 <KpiCard label="Stub"      value={counts.stub}  color={STATUS_COLOR.Stub}      onClick={() => focusStatus("Stub")}      active={tab === "Notes" && statusFilter === "Stub"} />
                 <KpiCard label="Draft"     value={counts.draft} color={STATUS_COLOR.Draft}     onClick={() => focusStatus("Draft")}     active={tab === "Notes" && statusFilter === "Draft"} />
                 <KpiCard label="Solid"     value={counts.solid} color={STATUS_COLOR.Solid}     onClick={() => focusStatus("Solid")}     active={tab === "Notes" && statusFilter === "Solid"} />
