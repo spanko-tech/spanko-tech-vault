@@ -1,0 +1,21 @@
+.DS_Store
+._*
+Thumbs.db
+ehthumbs.db
+Icon?
+.Spotlight-V100
+.Trashes
+*.swp
+*.swo
+*.tmp
+
+# Obsidian
+.trash/
+.obsidian/cache/
+.obsidian/workspace*
+.obsidian/updates.json
+
+# Common plugin caches
+.obsidian/plugins/*/cache/
+.obsidian/plugins/*/.cache/
+.obsidian/plugins/*/node_modules/
