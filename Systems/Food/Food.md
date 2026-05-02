@@ -1,3 +1,18 @@
+---
+goal_kcal: 2000
+goal_protein: 100
+goal_carbs: 200
+goal_fat: 40
+goal_fiber: 30
+plan_items:
+  - food:
+      path: Systems/Food/Recipes/Omelette.md
+      type: file
+      embed: false
+    amount: 1
+  - food: "[[Cherry Tomatoes]]"
+    amount: 300
+---
 ﻿---
 aliases: []
 tags:

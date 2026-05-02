@@ -20,11 +20,10 @@ function sectionContent(body, name) {
     return m ? m[1].trim() : null;
 }
 
-function lintRelease(r) {
+function lintRelease(r, body) {
     const issues = [];
     const status = r.value("status") ?? "Planned";
     const breaking = r.value("breaking") === "Yes";
-    const body = String(r.$body ?? "");
     if (status !== "Planned") {
         if (!sectionContent(body, "Highlights")) issues.push({ code: "no-highlights", severity: "warn", message: "Highlights empty" });
         if (!sectionContent(body, "Added") && !sectionContent(body, "Changed") && !sectionContent(body, "Fixed"))
@@ -69,6 +68,24 @@ return function View() {
     const [relCategoryFilter, setRelCategoryFilter] = dc.useState("All");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
 
+    const [bodyMap, setBodyMap] = dc.useState(new Map());
+    const pathsKey = releases.map(r => r.$path).join("|");
+    dc.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const m = new Map();
+            for (const r of releases) {
+                try {
+                    const file = dc.app.vault.getAbstractFileByPath(r.$path);
+                    if (!file) continue;
+                    m.set(r.$path, await dc.app.vault.cachedRead(file));
+                } catch (e) { /* ignore */ }
+            }
+            if (!cancelled) setBodyMap(m);
+        })();
+        return () => { cancelled = true; };
+    }, [pathsKey]);
+
     const RELEASE_STATUS = ["Planned", "In Progress", "Released"];
     const STATUS_COLOR   = { Planned: "var(--color-orange)", "In Progress": "var(--color-blue)", Released: "var(--color-green)" };
 
@@ -98,7 +115,7 @@ return function View() {
     ];
     const { sorted: sortedReleases, sortField: relSortField, setSortField: setRelSortField, sortDir: relSortDir, setSortDir: setRelSortDir } = useSortBy(releases, RELEASE_SORT_FIELDS, "date", "desc");
 
-    const relLints = dc.useMemo(() => computeLintMap(releases, lintRelease), [releases]);
+    const relLints = dc.useMemo(() => computeLintMap(releases, r => lintRelease(r, bodyMap.get(r.$path) ?? "")), [releases, bodyMap]);
     const { issueFilter: relIssueFilter, setIssueFilter: setRelIssueFilter, issueCounts: relIssueCounts, totalIssues: totalRelIssues, itemsWithLint: relWithIssues } =
         useLintState(releases, relLints);
 
@@ -211,7 +228,7 @@ return function View() {
                                             BREAKING
                                         </span>
                                         {(() => {
-                                            const iss = lintRelease(r);
+                                            const iss = lintRelease(r, bodyMap.get(r.$path) ?? "");
                                             if (!iss.length) return null;
                                             return <span title={iss.map(i => i.message).join(", ")} style={{ color: iss.some(i => i.severity === "error") ? "var(--color-red)" : "var(--color-orange)", fontSize: "0.9em" }}>⚠</span>;
                                         })()}

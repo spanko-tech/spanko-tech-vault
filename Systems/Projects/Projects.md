@@ -14,8 +14,7 @@ const PROJECT_STATUS = ["Idea", "Active", "Paused", "Shipped", "Archived"];
 const PROJ_ISSUE_CODES = ["no-category", "empty-goals"];
 const PROJ_ISSUE_LABELS = { "no-category": "no category", "empty-goals": "Goals empty" };
 
-function sectionIsEmpty(page, sectionName) {
-    const body = String(page.$body ?? "");
+function sectionIsEmpty(body, sectionName) {
     const esc = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(`##\\s+${esc}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
     const m = body.match(re);
@@ -23,11 +22,11 @@ function sectionIsEmpty(page, sectionName) {
     return !m[1].trim();
 }
 
-function lintProject(project) {
+function lintProject(project, body) {
     const issues = [];
     if (!String(project.value("category") ?? "").trim())
         issues.push({ code: "no-category", severity: "warn", message: "no category" });
-    if (sectionIsEmpty(project, "Goals"))
+    if (sectionIsEmpty(body, "Goals"))
         issues.push({ code: "empty-goals", severity: "warn", message: "Goals section empty" });
     return issues;
 }
@@ -51,7 +50,25 @@ return function View() {
         return c;
     }, [projects]);
 
-    const lintIssues = dc.useMemo(() => computeLintMap(projects, lintProject), [projects]);
+    const [bodyMap, setBodyMap] = dc.useState(new Map());
+    const pathsKey = projects.map(p => p.$path).join("|");
+    dc.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const m = new Map();
+            for (const p of projects) {
+                try {
+                    const file = dc.app.vault.getAbstractFileByPath(p.$path);
+                    if (!file) continue;
+                    m.set(p.$path, await dc.app.vault.cachedRead(file));
+                } catch (e) { /* ignore */ }
+            }
+            if (!cancelled) setBodyMap(m);
+        })();
+        return () => { cancelled = true; };
+    }, [pathsKey]);
+
+    const lintIssues = dc.useMemo(() => computeLintMap(projects, p => lintProject(p, bodyMap.get(p.$path) ?? "")), [projects, bodyMap]);
     const { issueFilter, setIssueFilter, issueCounts, totalIssues: totalLintIssues, itemsWithLint: projectsWithLint } =
         useLintState(projects, lintIssues);
 

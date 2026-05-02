@@ -186,11 +186,11 @@ function IssueCard({ issue, extra, releases = [], hideReleased = false }) {
             borderLeft: `3px solid ${PRIO_COLOR[prio]}`
         }}>
             <div style={{ fontSize: "0.88em", fontWeight: 500 }}><dc.Link link={issue.$link} /></div>
-            <div style={{ fontSize: "0.72em", opacity: 0.75, marginTop: "2px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "6px" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ fontSize: "0.72em", opacity: 0.75, marginTop: "2px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "4px" }}>
+                <span style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 6px", flex: 1, minWidth: 0 }}>
                     <span style={{ opacity: 0.7 }}>{proj || "—"}</span>
                     <StatusSelect item={issue} field="priority" options={PRIORITY} defaultValue="Med" />
-                    <dc.VanillaSelect value={relName} options={cardRelOpts} onValueChange={v => setIssueReleaseField(issue, v, releases)} />
+                    <dc.VanillaSelect value={relName} options={cardRelOpts} onValueChange={v => setIssueReleaseField(issue, v, releases)} style={{ maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis" }} />
                     <span
                         title={issue.value("ai_delegated") ? "AI delegated · click to remove" : "Not AI delegated · click to delegate"}
                         onClick={() => V.setField(issue, "ai_delegated", issue.value("ai_delegated") ? null : true)}

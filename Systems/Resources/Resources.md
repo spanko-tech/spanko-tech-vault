@@ -28,9 +28,8 @@ function UrlCell({ item }) {
     return <a href={u} target="_blank" rel="noopener" style={{ fontSize: "0.85em" }}>{host} ↗</a>;
 }
 
-function lintResource(resource) {
+function lintResource(resource, body) {
     const issues = [];
-    const body = String(resource.$body ?? "");
     const re = /##\s+Use cases\s*\n([\s\S]*?)(?=\n##\s|$)/i;
     const m = body.match(re);
     if (!m || !m[1].trim()) issues.push({ code: "no-use-cases", severity: "warn", message: "Use cases empty" });
@@ -73,7 +72,25 @@ return function View() {
         return ["All", "Unassigned", ...matching];
     }, [projectNames, projCatFilter, projectCategoryMap, projectPages]);
 
-    const lintIssues = dc.useMemo(() => computeLintMap(all, lintResource), [all]);
+    const [bodyMap, setBodyMap] = dc.useState(new Map());
+    const pathsKey = all.map(r => r.$path).join("|");
+    dc.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const m = new Map();
+            for (const r of all) {
+                try {
+                    const file = dc.app.vault.getAbstractFileByPath(r.$path);
+                    if (!file) continue;
+                    m.set(r.$path, await dc.app.vault.cachedRead(file));
+                } catch (e) { /* ignore */ }
+            }
+            if (!cancelled) setBodyMap(m);
+        })();
+        return () => { cancelled = true; };
+    }, [pathsKey]);
+
+    const lintIssues = dc.useMemo(() => computeLintMap(all, r => lintResource(r, bodyMap.get(r.$path) ?? "")), [all, bodyMap]);
     const { issueFilter, setIssueFilter, issueCounts: resIssueCounts, totalIssues: totalResIssues, itemsWithLint: resourcesWithLint } =
         useLintState(all, lintIssues);
 
