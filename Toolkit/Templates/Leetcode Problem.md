@@ -1,5 +1,6 @@
 <%* 
 let url = await tp.system.prompt("Paste the LeetCode problem URL:");
+let study_plan = tp.user.leetcode_scrapper.extractStudyPlan(url);
 url = tp.user.leetcode_scrapper.cleanUrl(url);
 let problem = await tp.user.leetcode_scrapper.scrapProblem(tp, url);
 let problemRaw = problem;
@@ -19,6 +20,7 @@ link: <% url %>
 id: <% problem.questionFrontendId %>
 difficulty: <% problem.difficulty %>
 status: To Do
+study_plan: <% study_plan ?? "" %>
 topics: [<%* problem.topicTags.forEach(tag => {tR += `${tag.name}, `;}); %>]
 ---
 # <% note_name %>
@@ -61,4 +63,6 @@ if (problem.similarQuestions) {
     tR += "No similar questions available.\n\n";
 } 
 _%>
+
+## My approach
 

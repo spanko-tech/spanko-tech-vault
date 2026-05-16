@@ -1,4 +1,5 @@
 ---
+dashboard: true
 tags:
   - system/resources
   - datacore/dashboard
@@ -6,14 +7,10 @@ tags:
 
 # Resources
 
-Your personal toolkit of permanent resources and tools.
-
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, EditText, KPIRow, ChipListCell, useDebouncedSearch, SearchableSelect, computeLintMap, useLintState, LintPanel, lintColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
-
-const RESOURCE_ISSUE_CODES = ["no-use-cases"];
-const RESOURCE_ISSUE_LABELS = { "no-use-cases": "no use cases" };
+const { NewForm, EditText, KPIRow, ChipListCell, useDebouncedSearch, useBodyMap, SearchableSelect, FilterRow, computeLintMap, useLintState, LintPanel, lintColumn, deleteColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { lintResource, RES_ISSUE_CODES: RESOURCE_ISSUE_CODES, RES_ISSUE_LABELS: RESOURCE_ISSUE_LABELS } = await dc.require("Toolkit/Datacore/LintRules.js");
 
 function projectsArray(item) {
     const ps = item.value("projects") ?? [];
@@ -26,14 +23,6 @@ function UrlCell({ item }) {
     let host = u;
     try { host = new URL(u).hostname.replace(/^www\./, ""); } catch (e) {}
     return <a href={u} target="_blank" rel="noopener" style={{ fontSize: "0.85em" }}>{host} ↗</a>;
-}
-
-function lintResource(resource, body) {
-    const issues = [];
-    const re = /##\s+Use cases\s*\n([\s\S]*?)(?=\n##\s|$)/i;
-    const m = body.match(re);
-    if (!m || !m[1].trim()) issues.push({ code: "no-use-cases", severity: "warn", message: "Use cases empty" });
-    return issues;
 }
 
 return function View() {
@@ -72,23 +61,7 @@ return function View() {
         return ["All", "Unassigned", ...matching];
     }, [projectNames, projCatFilter, projectCategoryMap, projectPages]);
 
-    const [bodyMap, setBodyMap] = dc.useState(new Map());
-    const pathsKey = all.map(r => r.$path).join("|");
-    dc.useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            const m = new Map();
-            for (const r of all) {
-                try {
-                    const file = dc.app.vault.getAbstractFileByPath(r.$path);
-                    if (!file) continue;
-                    m.set(r.$path, await dc.app.vault.cachedRead(file));
-                } catch (e) { /* ignore */ }
-            }
-            if (!cancelled) setBodyMap(m);
-        })();
-        return () => { cancelled = true; };
-    }, [pathsKey]);
+    const bodyMap = useBodyMap(all);
 
     const lintIssues = dc.useMemo(() => computeLintMap(all, r => lintResource(r, bodyMap.get(r.$path) ?? "")), [all, bodyMap]);
     const { issueFilter, setIssueFilter, issueCounts: resIssueCounts, totalIssues: totalResIssues, itemsWithLint: resourcesWithLint } =
@@ -145,7 +118,7 @@ return function View() {
                 ]}
             />
 
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "10px", alignItems: "center" }}>
+            <FilterRow>
                 <label style={{ fontSize: "0.82em" }}>Category: <SearchableSelect value={catFilter}
                     options={["All", ...categories]}
                     onValueChange={setCatFilter} /></label>
@@ -158,7 +131,7 @@ return function View() {
                 <input type="text" placeholder="🔍 search name / vendor / url / category"
                     value={searchInput} onChange={e => setSearchInput(e.target.value)}
                     style={{ width: "260px", marginLeft: "auto" }} />
-            </div>
+            </FilterRow>
 
             <div style={{ fontSize: "0.78em", color: "var(--text-muted)", marginBottom: "6px" }}>
                 {filtered.length} of {all.length} shown
@@ -173,7 +146,8 @@ return function View() {
                     { id: "URL",      value: r => String(r.value("url") ?? ""),      render: (_, r) => <UrlCell item={r} /> },
                     { id: "Projects", value: r => projectsArray(r).map(V.linkBasename).filter(Boolean).join(", "),
                       render: (_, r) => <ChipListCell item={r} field="projects" options={projectNames} placeholder="+ add" /> },
-                    lintColumn(lintIssues, issueFilter, setIssueFilter)
+                    lintColumn(lintIssues, issueFilter, setIssueFilter),
+                    deleteColumn("resource")
                 ]} />
         </div>
     );

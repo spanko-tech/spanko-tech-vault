@@ -1,4 +1,5 @@
 ---
+dashboard: true
 tags:
   - system/infrastructure
 ---

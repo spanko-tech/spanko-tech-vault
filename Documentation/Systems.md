@@ -2,6 +2,52 @@
 
 This document describes how each system works and what has been extracted from the dashboards.
 
+## Home
+
+### Home Dashboard
+**Location**: `Systems/Home/Home.md`  
+**Purpose**: Vault-wide overview and external feed aggregator
+
+**How it works**:
+- KPI tiles pulled live from every other system (notes, projects, habits, issues, etc.)
+- External feeds fetched on load and cached: news, weather, quotes, Wikipedia, LeetCode daily challenge
+- "Rediscover" feature surfaces random notes from Cogito
+- "Needs Attention" panel pulls lint issues from other dashboards
+- Quick capture sends text directly to the Cogito inbox
+
+**Key Features**:
+- Hacker News, Dev.to, Lobsters feeds with category/tag filtering
+- Configurable RSS panel (The New Stack, Ars Technica, DevClass, InfoQ by default)
+- Weather via Open-Meteo (geocoding + forecast)
+- Wikipedia "On This Day" events
+- ZenQuotes quote of the day
+- LeetCode daily challenge widget
+- Recently edited notes list
+
+---
+
+## Oraculum
+
+### Oraculum AI Assistant
+**Location**: `Systems/Oraculum/Oraculum.md`  
+**Purpose**: Embedded AI assistant with full vault access
+
+**How it works**:
+- Connects to the Gemini API (Gemma 4 by default) via a `localStorage`-stored API key - never written to disk
+- Agentic loop: up to 25 tool-calling rounds per message
+- Loads skills from `Systems/Oraculum/Skills/` and context from `Systems/Oraculum/Context/` at startup
+- Sessions are saved as markdown notes under `Systems/Oraculum/Sessions/`
+- Settings panel manages API keys, model selection, tool toggles, and integration keys
+
+**Key Features**:
+- 60+ tools across all vault systems (read, create, update notes in every system)
+- **Semantic search**: `text-embedding-004` builds a 768-dimensional embedding index; trigger rebuild from the settings panel
+- **Deep Research**: Gemini 2.5 Flash with Google Search grounding; results stored per-topic and recalled in future conversations
+- Integrations panel shows all external services with key status
+- Customizable skills and context files (fill in `Skills/25 User Profile.md` to personalize)
+
+---
+
 ## Personal Systems
 
 ### Habits System
@@ -49,7 +95,7 @@ This document describes how each system works and what has been extracted from t
 - Each note lives in its respective subfolder: `Systems/Finances/Income/` or `Systems/Finances/Expenses/`
 - Status options: Active, Inactive
 - Frequency options: Monthly, Yearly
-- Currency options: CZK, EUR, USD
+- Currency: configurable via `baseCurrency` frontmatter field in `Finances.md` (defaults to CZK; change to EUR, USD, GBP, or any code supported by Frankfurter). Each entry can be logged in the base currency, EUR, or USD - the dashboard converts everything to the base currency for display.
 
 **Key Features**:
 - Separate creation forms for income and expense entries
@@ -68,7 +114,7 @@ This document describes how each system works and what has been extracted from t
 - Efficiency calculations (e.g., protein per 100 calories)
 
 **Key Features**:
-- **FatSecret scraper**: "+ Ingredient via FatSecret" button runs Templater template — paste FatSecret URL for auto-filled nutrition data
+- **FatSecret scraper**: "+ Ingredient via FatSecret" button runs Templater template - paste FatSecret URL for auto-filled nutrition data
 - **Recipe editor**: New recipes embed per-recipe ingredient editor (`Toolkit/Snippets/Recipe Editor.md`) with live macro totals
 - Macro goal visualization
 - Custom nutrition efficiency metrics
@@ -144,15 +190,16 @@ This document describes how each system works and what has been extracted from t
 - Tabbed multi-system dashboard
 - Skills level progression: Novice → Advanced Beginner → Competent → Proficient → Expert
 - Decision status tracking for ADRs
+- Lint checks across all four subtabs: missing sections, incomplete entries (Brags, ADRs, Reviews, Postmortems each have their own rules)
 
 ### Resources System
 **Location**: `Systems/Resources/`  
 **Purpose**: Development tools and service catalog
 
 **Mental filter for adding resources**:
-- **Permanent** — not monthly subscriptions (Synty packs, Mixamo, one-time purchases like Shodan)
-- **Worth a name** — not too obvious (like Rider) or too narrow (single YouTube video)
-- **Latent intent** — tools you want surfaced when starting new projects
+- **Permanent** - not monthly subscriptions (Synty packs, Mixamo, one-time purchases like Shodan)
+- **Worth a name** - not too obvious (like Rider) or too narrow (single YouTube video)
+- **Latent intent** - tools you want surfaced when starting new projects
 
 **How it works**:
 - Free-form categories invented as needed
@@ -197,6 +244,7 @@ This document describes how each system works and what has been extracted from t
 - Difficulty and status inline editing
 - Topic and ID search
 - Count-based status overview
+- Lint checks: missing solution body, unsolved problems with no recent activity, incomplete notes
 
 **Technical Details**:  
 The "+ New Problem" button runs `Toolkit/Scripts/Templater/leetcode_scrapper.js` which:
@@ -204,6 +252,24 @@ The "+ New Problem" button runs `Toolkit/Scripts/Templater/leetcode_scrapper.js`
 2. Downloads inline images to per-problem `Images/` subfolder
 3. Creates note from `Leetcode Problem.md` template
 4. Requires **Templater** plugin
+
+### Presentations System
+**Location**: `Systems/Presentations/`  
+**Purpose**: Slide deck planning and management
+
+**How it works**:
+- Each presentation is a note tagged `#system/presentation`
+- Slide content is authored in a separate `.md` file rendered by the Advanced Slides plugin (Reveal.js)
+- Status workflow: Draft → Ready → Delivered → Archived
+- Lint checks flag missing slide file links and presentations stuck in Draft
+
+**Key Features**:
+- Status tracking and inline editing
+- Lint: missing linked slide file, stale drafts
+- Quick-open button to jump to the slide file
+
+**Requirements**:
+- [Advanced Slides](https://github.com/MSzturc/obsidian-advanced-slides) plugin for rendering slides
 
 ---
 
@@ -254,26 +320,26 @@ See [Datacore Library](Datacore%20Library.md) for detailed documentation.
 **Purpose**: Note creation templates
 
 Available templates:
-- `Leetcode Problem.md` — created by the LeetCode scraper
-- `Ingredient (FatSecret).md` — created by the FatSecret scraper
-- `Excalidraw Template.md` — blank canvas for drawings
+- `Leetcode Problem.md` - created by the LeetCode scraper
+- `Ingredient (FatSecret).md` - created by the FatSecret scraper
+- `Excalidraw Template.md` - blank canvas for drawings
 
 ### Scripts
 **Location**: `Toolkit/Scripts/Templater/`  
 **Purpose**: Automation scripts (Templater User Scripts folder)
 
 Current scripts:
-- **`leetcode_scrapper.js`** — Fetches problems from LeetCode's GraphQL API
-- **`fatsecret_scraper.js`** — Fetches nutrition data from FatSecret
-- **`github_scrapper.js`** — Fetches GitHub project metadata
-- **`image_downloader.js`** — Downloads and embeds images for scraped content
+- **`leetcode_scrapper.js`** - Fetches problems from LeetCode's GraphQL API
+- **`fatsecret_scraper.js`** - Fetches nutrition data from FatSecret
+- **`github_scrapper.js`** - Fetches GitHub project metadata
+- **`image_downloader.js`** - Downloads and embeds images for scraped content
 
 ### Snippets
 **Location**: `Toolkit/Snippets/`  
 **Purpose**: Embeddable component notes (transclusion targets)
 
 Current snippets:
-- **`Recipe Editor.md`** — ingredient editor embedded inside recipe notes; manages per-recipe ingredient list with live macro totals
+- **`Recipe Editor.md`** - ingredient editor embedded inside recipe notes; manages per-recipe ingredient list with live macro totals
 
 ---
 
@@ -337,8 +403,8 @@ A horizontal strip of counts shown above the filter bar. Pass an `items` array o
 
 ### Two-Row Filter Bar
 
-- **Row 1** — status pill buttons (`["All", ...STATUS_OPTIONS].map(...)`)
-- **Row 2** — `<SearchableSelect>` dropdowns for cascading filters (e.g. category → project) + debounced search `<input>` + `<SortBar>`
+- **Row 1** - status pill buttons (`["All", ...STATUS_OPTIONS].map(...)`)
+- **Row 2** - `<SearchableSelect>` dropdowns for cascading filters (e.g. category → project) + debounced search `<input>` + `<SortBar>`
 
 ### Category → Project Cascade
 
@@ -360,8 +426,8 @@ onValueChange={v => { setCatFilter(v); setProjectFilter("All"); }}
 
 All quality-tracking dashboards (Projects, Resources, Releases, Infrastructure) share the same lint plumbing:
 
-1. **Define lint codes** — `const MY_CODES = ["CODE_A", "CODE_B"]` and a labels map.
-2. **Write a domain lint function** — `(item) => issue[]` where each issue is `{ code, severity, message }`.
+1. **Define lint codes** - `const MY_CODES = ["CODE_A", "CODE_B"]` and a labels map.
+2. **Write a domain lint function** - `(item) => issue[]` where each issue is `{ code, severity, message }`.
 3. **Wire at top of View():**
    ```jsx
    const lintMap = dc.useMemo(() => computeLintMap(items, myLintFn), [items]);
@@ -429,49 +495,43 @@ Every dashboard that creates items uses `<NewForm>`. It renders a `+` button tha
 
 These systems intentionally deviate from the standard patterns. Deviations are by design, not oversight.
 
-### Finances — No Lint
+### Finances - No Lint
 
 **Deviation**: No lint, limited inline editing.
 
-**Why**: Financial records don't have quality requirements that lint could enforce — a transaction is either complete or it isn't.
+**Why**: Financial records don't have quality requirements that lint could enforce - a transaction is either complete or it isn't.
 
-### Habits — Heatmap Instead of Table
+### Habits - Heatmap Instead of Table
 
 **Deviation**: No table, no sort bar, no filter pills, no lint.
 
-**Why**: Habits are binary daily/weekly toggles, not structured tasks. A heatmap conveys patterns far better than a row-per-item table. Completion is toggled directly on the calendar grid. Lint is inappropriate — there is no "quality" to track on a habit entry.
+**Why**: Habits are binary daily/weekly toggles, not structured tasks. A heatmap conveys patterns far better than a row-per-item table. Completion is toggled directly on the calendar grid. Lint is inappropriate - there is no "quality" to track on a habit entry.
 
-### Food — No Dashboard Table
+### Food - No Dashboard Table
 
 **Deviation**: No main dashboard table, no lint, no sort/filter UI.
 
 **Why**: Food is primarily composition, not tracking. Recipes are authored documents, not status-tracked tasks. The "dashboard" is a creation wizard (NewForm + FatSecret scraper), not a management view.
 
-### LeetCode — No Lint
+### LeetCode - No `lintColumn` in Kanban View
 
-**Deviation**: Has table + sort + filter, but no lint.
+**Deviation**: Has a full kanban + table + lint panel, but the kanban view doesn't use `lintColumn` since kanban cards don't use `dc.Table`.
 
-**Why**: Problems are either done or not done — there is no quality requirement to validate. Lint would have nothing meaningful to flag.
+**Why**: The lint panel still works and filters items - the lint column just can't attach to a kanban card layout. The table view does show the lint column.
 
-### Growth — No Lint
-
-**Deviation**: Has tabs + forms, but no lint.
-
-**Why**: Growth tracks skills, decisions, and retrospectives. These are qualitative records rather than items with enforceable field requirements. Forcing lint on ADRs or postmortems would add noise without value.
-
-### Cogito (Notes) — Original Lint Implementation, More Complex
+### Cogito (Notes) - Original Lint Implementation, More Complex
 
 **Deviation**: The lint here predates the shared `Lint.jsx` module and uses a richer model. Issue codes are stored in a `Set`, not a plain string. The panel uses hand-rolled `IssueChips` logic with backlink and age-based staleness checks that don't fit the generic `useLintState` signature.
 
 **Why it hasn't been migrated**: The Cogito lint is meaningfully more complex (aging rules, backlinks, domain-aware messages) and was the reference implementation from which `Lint.jsx` was extracted. It could theoretically use `computeLintMap` + `LintPanel`, but the `useLintState` hook's simple `issueFilter` string wouldn't replace the Set-based multi-select in Cogito without extra work.
 
-### Infrastructure — Three Parallel Lint States
+### Infrastructure - Three Parallel Lint States
 
 **Deviation**: Calls `useLintState` three times (once per entity type: servers, services, networks). All three share a single `lint.issues` Map generated by `lintInfra()` but each has its own independent filter state.
 
 **Why**: Infrastructure manages three physically different entity types displayed in separate sections. A single lint panel would obscure which entity type has issues. The tradeoff is three sets of props flowing to three `<LintPanel>` + `lintColumn` calls, but the clarity is worth it.
 
-### Releases — No `lintColumn`
+### Releases - No `lintColumn`
 
 **Deviation**: Uses `computeLintMap` + `useLintState` + `LintPanel`, but does NOT use `lintColumn`.
 

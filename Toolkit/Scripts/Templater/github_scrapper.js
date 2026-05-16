@@ -1,4 +1,4 @@
-﻿// GitHub repository scraper for the Resources system.
+// GitHub repository scraper for the Resources system.
 // Uses the public REST API (no auth needed for low-volume use).
 // Returns the same shape every Resources scraper should return.
 

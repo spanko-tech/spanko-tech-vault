@@ -1,4 +1,5 @@
 ---
+dashboard: true
 aliases: []
 tags:
   - system/jobs
@@ -7,11 +8,9 @@ tags:
 
 # Job Search
 
-Manage job applications with kanban workflow and document tracking.
-
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, KPIRow, TabStrip, Kanban, EditText, useDebouncedSearch } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, KPIRow, TabStrip, Kanban, EditText, useDebouncedSearch, deleteColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
 const { fmtDate, daysSince, today, notify } = V;
 
 const APP_STATUS = ["Applied", "Interview", "Offer", "Rejected", "Archived"];
@@ -230,7 +229,8 @@ return function View() {
                                 }
                             },
                             { id: "📄 CV", value: a => String(a.value("cv") ?? ""), render: (_, a) => <DocCell app={a} field="cv" icon="📄" /> },
-                            { id: "✉️ Cover Letter", value: a => String(a.value("cover_letter") ?? ""), render: (_, a) => <DocCell app={a} field="cover_letter" icon="✉️" /> }
+                            { id: "✉️ Cover Letter", value: a => String(a.value("cover_letter") ?? ""), render: (_, a) => <DocCell app={a} field="cover_letter" icon="✉️" /> },
+                            deleteColumn("application")
                         ]} />
                 </div>
             ) : null}

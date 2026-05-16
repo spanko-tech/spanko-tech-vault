@@ -1,4 +1,5 @@
 ---
+dashboard: true
 tags:
   - system/issues
 ---
@@ -7,8 +8,9 @@ tags:
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { Kanban, Section, StatusSelect, useDebouncedSearch, SearchableSelect, useSortBy, SortBar } = await dc.require("Toolkit/Datacore/UI.jsx");
-const { safeName, daysSince, fmtDate, ensureFolder, notify, today } = V;
+const { Kanban, Section, StatusSelect, useDebouncedSearch, SearchableSelect, useSortBy, SortBar, FilterRow, NewForm } = await dc.require("Toolkit/Datacore/UI.jsx");
+const I = await dc.require("Toolkit/Datacore/Issues.js");
+const { safeName, daysSince, fmtDate, notify, today } = V;
 
 const ACTIVE_STATUS = ["Todo", "In Progress", "Review", "Done"];
 const ALL_STATUS    = ["Backlog", ...ACTIVE_STATUS];
@@ -18,34 +20,28 @@ const DONE_RECENT_DAYS = 7;
 const ROOT = "Systems/Issues";
 
 async function setStatus(page, newStatus) {
-    const proj = page.value("project") ?? "Unfiled";
-    const oldPath = page.$path;
     await V.setFields(page, {
         status: newStatus,
         ...(newStatus === "Done" && !page.value("done") ? { done: today() } : {})
     });
-    const cleanProj = safeName(proj) || "Unfiled";
-    const destFolder = `${ROOT}/${cleanProj}/${newStatus}`;
-    await ensureFolder(destFolder);
-    const fileName = oldPath.split("/").pop();
-    const newPath = `${destFolder}/${fileName}`;
-    if (oldPath !== newPath) {
-        const file = dc.app.vault.getAbstractFileByPath(oldPath);
-        if (file) try { await dc.app.fileManager.renameFile(file, newPath); } catch (_) {}
-    }
+    const proj = page.value("project") ?? "Unfiled";
+    await I.moveIssueTo(page.$path, proj, newStatus);
 }
 
 async function archiveIssue(page) {
     await V.setFields(page, { archived: true, ...(page.value("archived_date") ? {} : { archived_date: today() }) });
+    await I.moveIssueTo(page.$path, page.value("project") ?? "Unfiled", "Archived");
     notify("Archived");
 }
 
 async function unarchiveIssue(page) {
     await V.setField(page, "archived", false);
+    await I.moveIssueTo(page.$path, page.value("project") ?? "Unfiled", "Backlog");
     notify("Unarchived");
 }
 
 async function deleteIssue(page) {
+    if (!window.confirm(`Delete "${page.$name}" permanently? This cannot be undone.`)) return;
     const file = dc.app.vault.getAbstractFileByPath(page.$path);
     if (file) await dc.app.vault.delete(file);
     notify("Deleted");
@@ -57,71 +53,6 @@ async function setIssueReleaseField(issue, relName, allReleases) {
     const r = allReleases.find(x => x.$name === relName && (x.value("project") ?? "") === proj);
     const linkTarget = r ? r.$path.replace(/\.md$/, "") : relName;
     await V.setField(issue, "release", `[[${linkTarget}|${relName}]]`);
-}
-
-function NewIssueForm({ projects, releases, defaultProject, defaultRelease = "" }) {
-    const [open, setOpen] = dc.useState(false);
-    const [name, setName] = dc.useState("");
-    const [project, setProject] = dc.useState(defaultProject ?? (projects[0]?.$name ?? ""));
-    const [priority, setPriority] = dc.useState("Med");
-    const [status, setStatus_] = dc.useState("Backlog");
-    const [release, setRelease] = dc.useState(defaultRelease);
-    const [aiDelegated, setAiDelegated] = dc.useState(false);
-
-    const releaseOptions = dc.useMemo(() => {
-        const opts = [{ value: "", label: "— none —" }];
-        for (const r of releases) {
-            if ((r.value("project") ?? "") !== project) continue;
-            if ((r.value("status") ?? "Released") === "Released") continue;
-            opts.push({ value: r.$name, label: r.$name });
-        }
-        return opts;
-    }, [releases, project]);
-
-    if (!open) return <button className="mod-cta" onClick={() => {
-        setName(""); setProject(defaultProject ?? projects[0]?.$name ?? ""); setPriority("Med"); setStatus_("Backlog"); setRelease(defaultRelease ?? ""); setOpen(true);
-    }} style={{ marginBottom: "8px" }}>+ New Issue</button>;
-    return (
-        <div style={{ padding: "10px", background: "var(--background-secondary)", borderRadius: "6px", marginBottom: "10px" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
-                <input type="text" placeholder="Issue title" value={name} onChange={e => setName(e.target.value)} style={{ width: "260px" }} />
-                <label style={{ fontSize: "0.85em" }}>Project: <dc.VanillaSelect value={project} options={projects.map(p => ({ value: p.$name, label: p.$name }))} onValueChange={v => { setProject(v); setRelease(""); }} /></label>
-                <label style={{ fontSize: "0.85em" }}>Status: <dc.VanillaSelect value={status} options={ALL_STATUS.map(s => ({ value: s, label: s }))} onValueChange={setStatus_} /></label>
-                <label style={{ fontSize: "0.85em" }}>Priority: <dc.VanillaSelect value={priority} options={PRIORITY.map(p => ({ value: p, label: p }))} onValueChange={setPriority} /></label>
-                <label style={{ fontSize: "0.85em" }}>Release: <dc.VanillaSelect value={release} options={releaseOptions} onValueChange={setRelease} /></label>
-                <label style={{ fontSize: "0.85em", display: "inline-flex", alignItems: "center", gap: "4px" }} title="When checked, an AI agent is allowed to work on this issue">
-                    <input type="checkbox" checked={aiDelegated} onChange={e => setAiDelegated(e.target.checked)} />🤖 AI delegated
-                </label>
-                <button className="mod-cta" onClick={async () => {
-                    const cleanName = safeName(name) || "Untitled";
-                    const cleanProj = safeName(project) || "Unfiled";
-                    const folder = `${ROOT}/${cleanProj}/${status}`;
-                    await ensureFolder(folder);
-                    const fmLines = [
-                        "---",
-                        "tags: [system/issues/issue]",
-                        `project: ${project}`,
-                        `status: ${status}`,
-                        `priority: ${priority}`
-                    ];
-                    if (release) {
-                        const r = releases.find(x => x.$name === release && (x.value("project") ?? "") === project);
-                        const linkTarget = r ? r.$path.replace(/\.md$/, "") : release;
-                        fmLines.push(`release: "[[${linkTarget}|${release}]]"`);
-                    }
-                    if (aiDelegated) fmLines.push("ai_delegated: true");
-                    fmLines.push(`created: ${today()}`, "---", "", `# ${cleanName}`, "");
-                    const path = `${folder}/${cleanName}.md`;
-                    try {
-                        await dc.app.vault.create(path, fmLines.join("\n"));
-                        notify(`Created ${cleanName}`);
-                        setName(""); // keep form open for chaining
-                    } catch (e) { notify(`Failed: ${e.message}`); }
-                }}>Create</button>
-                <button onClick={() => { setOpen(false); setName(""); }}>Close</button>
-            </div>
-        </div>
-    );
 }
 
 function IssueRow({ issue, opacity = 1, action, releases = [], hideReleased = false }) {
@@ -312,11 +243,42 @@ return function View() {
 
     return (
         <div>
-            <NewIssueForm projects={projects} releases={releases}
-                defaultProject={issueProject !== "All" ? issueProject : undefined}
-                defaultRelease={issueRelease !== "All" && issueRelease !== "__none__" ? issueRelease.split("::")[1] : ""} />
+            <NewForm label="+ New Issue" tag="system/issues/issue"
+                folderFn={vals => `${ROOT}/${safeName(vals.project || "Unfiled")}/${vals.status || "Backlog"}`}
+                fields={[
+                    { name: "name",        label: "Title",    width: "260px" },
+                    { name: "project",     label: "Project",  type: "select",
+                      options: projects.map(p => p.$name),   default: projects[0]?.$name ?? "" },
+                    { name: "status",      label: "Status",   type: "select",
+                      options: ALL_STATUS,                    default: "Backlog" },
+                    { name: "priority",    label: "Priority", type: "select",
+                      options: PRIORITY,                      default: "Med" },
+                    { name: "release",     label: "Release",  type: "select",
+                      options: vals => {
+                          const proj = vals.project ?? "";
+                          const active = releases.filter(r =>
+                              (r.value("project") ?? "") === proj &&
+                              (r.value("status")  ?? "Released") !== "Released"
+                          );
+                          return [{ value: "", label: "— none —" }, ...active.map(r => ({ value: r.$name, label: r.$name }))];
+                      },
+                      transform: (raw, vals) => {
+                          if (!raw) return null;
+                          const proj = vals.project ?? "";
+                          const r = releases.find(x => x.$name === raw && (x.value("project") ?? "") === proj);
+                          const target = r ? r.$path.replace(/\.md$/, "") : raw;
+                          return `[[${target}|${raw}]]`;
+                      }
+                    },
+                    { name: "ai_delegated", label: "🤖 AI", type: "checkbox" }
+                ]}
+                effects={[{ when: "project", set: "release", compute: () => "" }]}
+                initialValues={{
+                    project: issueProject !== "All" ? issueProject : (projects[0]?.$name ?? ""),
+                    release: issueRelease !== "All" && issueRelease !== "__none__" ? issueRelease.split("::")[1] : ""
+                }} />
 
-            <div style={{ marginBottom: "10px", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+            <FilterRow>
                 <label style={{ display: "flex", alignItems: "center", gap: "4px" }}>Category:&nbsp;
                     <SearchableSelect value={issueCategoryFilter}
                         options={["All", ...projectCategories]}
@@ -346,7 +308,7 @@ return function View() {
                     Hide Released
                 </label>
                 <SortBar fields={ISSUE_SORT_FIELDS} field={issueSortField} setField={setIssueSortField} dir={issueSortDir} setDir={setIssueSortDir} />
-            </div>
+            </FilterRow>
 
             <Section title={<span>📥 Backlog ({backlog.length}) <span style={{ opacity: 0.5, fontSize: "0.85em" }}>· promote items into the active flow</span></span>} defaultOpen={backlog.length > 0}>
                 {backlog.length === 0

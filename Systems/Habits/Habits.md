@@ -1,4 +1,5 @@
 ---
+dashboard: true
 aliases: []
 tags:
   - system/habits
@@ -7,11 +8,9 @@ tags:
 
 # Habits
 
-Track daily and weekly habits with visual heatmaps and progress statistics.
-
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, StatusSelect, SearchableSelect, useSortBy, SortBar } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, StatusSelect, SearchableSelect, useSortBy, SortBar, useDebouncedSearch } = await dc.require("Toolkit/Datacore/UI.jsx");
 
 const ENC = (s) => "d_" + s;
 const DEC = (x) => {
@@ -86,13 +85,68 @@ function monthGrid(year, month) {
 
 // NewForm imported from UI.md
 
+function CategoryCell({ habit, category, categories }) {
+    const [val, setVal] = dc.useState(category ?? "");
+    const lastSyncedRef = dc.useRef(category ?? "");
+    const listId = dc.useMemo(() => `cats-${Math.random().toString(36).slice(2, 9)}`, []);
+    dc.useEffect(() => {
+        if ((category ?? "") !== lastSyncedRef.current) {
+            setVal(category ?? "");
+            lastSyncedRef.current = category ?? "";
+        }
+    }, [category]);
+    const commit = async () => {
+        if (val === (category ?? "")) return;
+        lastSyncedRef.current = val;
+        await V.setField(habit, "category", val || null);
+    };
+    return (
+        <span>
+            <input type="text" value={val} list={listId}
+                onInput={e => setVal(e.currentTarget.value)}
+                onBlur={commit}
+                onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                placeholder="category…"
+                style={{ width: "120px", fontSize: "0.85em" }} />
+            <datalist id={listId}>
+                {categories.map(c => <option key={c} value={c} />)}
+            </datalist>
+        </span>
+    );
+}
+
 return function View() {
     const habits = dc.useQuery('@page and #system/habits/habit and path("Systems/Habits")');
     const HABIT_SORT_FIELDS = [
         { value: "$name",      label: "Name" },
         { value: "frequency",  label: "Frequency" },
     ];
-    const { sorted: sortedHabits, sortField: habitSortField, setSortField: setHabitSortField, sortDir: habitSortDir, setSortDir: setHabitSortDir } = useSortBy(habits, HABIT_SORT_FIELDS);
+    const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
+    const [categoryFilter, setCategoryFilter] = dc.useState("All");
+    const allCategories = dc.useMemo(() => {
+        const s = new Set();
+        for (const h of habits) { const c = h.value("category"); if (c) s.add(String(c)); }
+        return Array.from(s).sort();
+    }, [habits]);
+    const filteredHabits = dc.useMemo(() => habits.filter(h => {
+        if (categoryFilter !== "All" && (h.value("category") ?? "") !== categoryFilter) return false;
+        if (search && !h.$name.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+    }), [habits, categoryFilter, search]);
+    const { sorted: sortedHabits, sortField: habitSortField, setSortField: setHabitSortField, sortDir: habitSortDir, setSortDir: setHabitSortDir } = useSortBy(filteredHabits, HABIT_SORT_FIELDS);
+    const groupedHabits = dc.useMemo(() => {
+        const groups = {};
+        for (const h of sortedHabits) {
+            const cat = String(h.value("category") ?? "").trim() || "Uncategorized";
+            (groups[cat] ??= []).push(h);
+        }
+        const keys = Object.keys(groups).sort((a, b) => {
+            if (a === "Uncategorized") return 1;
+            if (b === "Uncategorized") return -1;
+            return a.localeCompare(b);
+        });
+        return keys.map(cat => ({ cat, items: groups[cat] }));
+    }, [sortedHabits]);
     const [weekOffset, setWeekOffset] = dc.useState(0);
     const [viewMonthIdx, setViewMonthIdx] = dc.useState(new Date().getMonth());
     const days = dc.useMemo(() => currentWeek(weekOffset), [weekOffset]);
@@ -123,13 +177,14 @@ return function View() {
         }
     };
 
-    const openHabit = (habit) => dc.app.workspace.openLinkText(habit.$path, "");
+    const openHabit = (habit) => dc.app.workspace.openLinkText(habit.$path, "", "tab");
 
     // Aggregate based on filter: if a single habit is selected, max count = 1; otherwise total habits in scope
     const sourceHabits = dc.useMemo(() => {
         if (filter === "__all__") return habits;
         if (filter === "__daily__") return habits.filter(h => (h.value("frequency") ?? "Daily") === "Daily");
         if (filter === "__weekly__") return habits.filter(h => h.value("frequency") === "Weekly");
+        if (filter.startsWith("__cat__")) return habits.filter(h => (h.value("category") ?? "") === filter.slice(7));
         return habits.filter(h => h.$path === filter);
     }, [habits, filter]);
 
@@ -221,15 +276,34 @@ return function View() {
                 tag="system/habits/habit"
                 fields={[
                     { name: "name", label: "Habit name", width: "200px" },
-                    { name: "frequency", label: "Frequency", type: "select", options: ["Daily", "Weekly"], default: "Daily" }
+                    { name: "frequency", label: "Frequency", type: "select", options: ["Daily", "Weekly"], default: "Daily" },
+                    { name: "category", label: "Category", placeholder: "e.g. Health, Mind", width: "160px", suggestions: allCategories }
                 ]}
                 defaults={{ log: [] }}
             />
 
             {habits.length === 0 ? <p><em>No habits yet.</em></p> : (
                 <div>
-                    <div style={{ overflowX: "auto", marginTop: "8px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", fontSize: "0.85em" }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", fontSize: "0.85em" }}>
+                        <SearchableSelect
+                            value={categoryFilter}
+                            options={[{ value: "All", label: "All categories" }, ...allCategories.map(c => ({ value: c, label: c }))]}
+                            onValueChange={setCategoryFilter}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search habits…"
+                            value={searchInput}
+                            onInput={e => setSearchInput(e.currentTarget.value)}
+                            style={{ padding: "2px 8px", borderRadius: "4px", border: "1px solid var(--background-modifier-border)", width: "160px" }}
+                        />
+                        {(categoryFilter !== "All" || search) && (
+                            <a onClick={() => { setCategoryFilter("All"); setSearchInput(""); }} style={{ cursor: "pointer", opacity: 0.7 }}>clear</a>
+                        )}
+                        <SortBar fields={HABIT_SORT_FIELDS} field={habitSortField} setField={setHabitSortField} dir={habitSortDir} setDir={setHabitSortDir} />
+                    </div>
+                    <div style={{ overflowX: "auto" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", fontSize: "0.85em" }}>
                             <button
                                 onClick={() => setWeekOffset(wo => wo - 1)}
                                 style={{ cursor: "pointer", padding: "2px 8px", borderRadius: "4px", border: "1px solid var(--background-modifier-border)", background: "transparent" }}>
@@ -249,56 +323,64 @@ return function View() {
                                     Today
                                 </button>
                             )}
-                            <SortBar fields={HABIT_SORT_FIELDS} field={habitSortField} setField={setHabitSortField} dir={habitSortDir} setDir={setHabitSortDir} />
                         </div>
-                        <table style={{ borderCollapse: "collapse", width: "auto" }}>
-                            <thead>
-                                <tr>
-                                    <th style={{ textAlign: "left", padding: "4px 8px" }}>Habit</th>
-                                    {days.map(d => {
-                                        const [y, m, day] = d.split("-").map(Number);
-                                        const dayName = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(y, m - 1, day).getDay()];
-                                        return (
-                                            <th key={d} style={{ padding: "2px 4px", fontSize: "0.75em", textAlign: "center" }}>
-                                                <div>{dayName}</div>
-                                                <div style={{ opacity: 0.6 }}>{d.slice(8)}</div>
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sortedHabits.map(habit => {
-                                    const log = (habit.value("log") ?? []).map(DEC);
-                                    const set = new Set(log);
-                                    return (
-                                        <tr key={habit.$path}>
-                                            <td style={{ padding: "4px 8px" }}>
-                                                <a className="internal-link" style={{ cursor: "pointer" }}
-                                                   onClick={() => openHabit(habit)}>{habit.$name}</a>
-                                                <span style={{ marginLeft: "6px", fontSize: "0.75em", opacity: 0.7 }}>
-                                                    <StatusSelect item={habit} field="frequency" options={["Daily","Weekly"]} defaultValue="Daily" />
-                                                </span>
-                                            </td>
-                                            {days.map(d => (
-                                                <td key={d} style={{ padding: "1px", textAlign: "center" }}>
-                                                    <button onClick={() => toggle(habit, d)}
-                                                        style={{
-                                                            cursor: "pointer", width: "22px", height: "22px",
-                                                            border: "1px solid var(--background-modifier-border)",
-                                                            background: set.has(d) ? "var(--color-green)" : "transparent",
-                                                            color: set.has(d) ? "white" : "inherit",
-                                                            borderRadius: "3px", fontSize: "0.85em"
-                                                        }}>
-                                                        {set.has(d) ? "✓" : ""}
-                                                    </button>
-                                                </td>
-                                            ))}
+                        {groupedHabits.map(({ cat, items }) => (
+                            <div key={cat} style={{ marginBottom: "20px" }}>
+                                <h3 style={{ margin: "0 0 4px 0", fontSize: "1em", color: "var(--text-accent)" }}>{cat}</h3>
+                                <table style={{ borderCollapse: "collapse", width: "auto" }}>
+                                    <thead>
+                                        <tr>
+                                            <th style={{ textAlign: "left", padding: "4px 8px" }}>Habit</th>
+                                            <th style={{ textAlign: "left", padding: "4px 8px" }}>Category</th>
+                                            {days.map(d => {
+                                                const [y, m, day] = d.split("-").map(Number);
+                                                const dayName = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(y, m - 1, day).getDay()];
+                                                return (
+                                                    <th key={d} style={{ padding: "2px 4px", fontSize: "0.75em", textAlign: "center" }}>
+                                                        <div>{dayName}</div>
+                                                        <div style={{ opacity: 0.6 }}>{d.slice(8)}</div>
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                    </thead>
+                                    <tbody>
+                                        {items.map(habit => {
+                                            const log = (habit.value("log") ?? []).map(DEC);
+                                            const set = new Set(log);
+                                            return (
+                                                <tr key={habit.$path}>
+                                                    <td style={{ padding: "4px 8px" }}>
+                                                        <a className="internal-link" style={{ cursor: "pointer" }}
+                                                           onClick={() => openHabit(habit)}>{habit.$name}</a>
+                                                        <span style={{ marginLeft: "6px", fontSize: "0.75em", opacity: 0.7 }}>
+                                                            <StatusSelect item={habit} field="frequency" options={["Daily","Weekly"]} defaultValue="Daily" />
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: "4px 8px" }}>
+                                                        <CategoryCell habit={habit} category={habit.value("category") ?? ""} categories={allCategories} />
+                                                    </td>
+                                                    {days.map(d => (
+                                                        <td key={d} style={{ padding: "1px", textAlign: "center" }}>
+                                                            <button onClick={() => toggle(habit, d)}
+                                                                style={{
+                                                                    cursor: "pointer", width: "22px", height: "22px",
+                                                                    border: "1px solid var(--background-modifier-border)",
+                                                                    background: set.has(d) ? "var(--color-green)" : "transparent",
+                                                                    color: set.has(d) ? "white" : "inherit",
+                                                                    borderRadius: "3px", fontSize: "0.85em"
+                                                                }}>
+                                                                {set.has(d) ? "✓" : ""}
+                                                            </button>
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ))}
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "20px" }}>
@@ -309,8 +391,10 @@ return function View() {
                             options={[
                                 { value: "__all__", label: "All habits" },
                                 { value: "__daily__", label: "Daily only" },
-                                { value: "__weekly__", label: "Weekly only" }
-                            ].concat(sortedHabits.map(h => ({ value: h.$path, label: h.$name })))}
+                                { value: "__weekly__", label: "Weekly only" },
+                                ...allCategories.map(c => ({ value: `__cat__${c}`, label: `📁 ${c}` })),
+                                ...habits.slice().sort((a, b) => a.$name.localeCompare(b.$name)).map(h => ({ value: h.$path, label: h.$name }))
+                            ]}
                             onValueChange={v => setFilter(v)}
                         />
                         <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.85em" }}>
@@ -381,7 +465,8 @@ return function View() {
                         const scopeLabel = filter === "__all__" ? "all habits"
                             : filter === "__daily__" ? "daily habits"
                             : filter === "__weekly__" ? "weekly habits"
-                            : (sortedHabits.find(h => h.$path === filter)?.$name ?? "selection");
+                            : filter.startsWith("__cat__") ? `${filter.slice(7)} habits`
+                            : (habits.find(h => h.$path === filter)?.$name ?? "selection");
                         const dailyN  = sourceHabits.filter(h => (h.value("frequency") ?? "Daily") === "Daily").length;
                         const weeklyN = sourceHabits.filter(h => h.value("frequency") === "Weekly").length;
                         const breakdown = (dailyN && weeklyN) ? ` (${dailyN}d + ${weeklyN}w)`

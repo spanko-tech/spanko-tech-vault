@@ -1,4 +1,4 @@
-﻿// Reusable lint UI: health panel, issue column, and state hook.
+// Reusable lint UI: health panel, issue column, and state hook.
 // Every dashboard that does quality-checking follows the same pattern —
 // this module removes all the boilerplate so each dashboard only defines
 // its domain-specific lint function and constants.

@@ -1,4 +1,4 @@
-﻿// Reusable Datacore hooks.
+// Reusable Datacore hooks.
 // Loaded with: const H = await dc.require("Toolkit/Datacore/ui/Hooks.jsx");
 
 /**
@@ -75,4 +75,65 @@ function useMultiFilter() {
     return [selected, toggle, clear, passes];
 }
 
-return { useDebouncedSearch, useSortBy, useMultiFilter };
+/**
+ * Async hook that reads raw file body for each item into a Map keyed by path.
+ * Cancels in-flight reads when the item list changes.
+ * @param {any[]} items  Array of Datacore page objects with .$path
+ * @returns {Map<string, string>} bodyMap  path → raw file content
+ */
+function useBodyMap(items) {
+    const [bodyMap, setBodyMap] = dc.useState(new Map());
+    const pathsKey = items.map(p => p.$path).join("|");
+    dc.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const m = new Map();
+            for (const p of items) {
+                try {
+                    const file = dc.app.vault.getAbstractFileByPath(p.$path);
+                    if (!file) continue;
+                    m.set(p.$path, await dc.app.vault.cachedRead(file));
+                } catch { /* ignore unreadable files */ }
+            }
+            if (!cancelled) setBodyMap(m);
+        })();
+        return () => { cancelled = true; };
+    }, [pathsKey]);
+    return bodyMap;
+}
+
+/**
+ * Async hook that reads each item's body and applies a transform per file.
+ * Returns Map<path, transform(text)>. Cancels in-flight reads on item-list change.
+ * Useful for body-derived data (e.g. sectionStats from LintRules).
+ * @param {any[]} items  Array of Datacore page objects with .$path
+ * @param {(text:string, path:string)=>any} transform  Function applied to each file body
+ * @returns {Map<string, any>}
+ *
+ * @example
+ *   const bodyStats = useBodyStats(notes, sectionStats);
+ *   const issues = lintNote(n, bodyStats);
+ */
+function useBodyStats(items, transform) {
+    const [statsMap, setStatsMap] = dc.useState(new Map());
+    const pathsKey = items.map(p => p.$path).join("|");
+    dc.useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const m = new Map();
+            for (const p of items) {
+                try {
+                    const file = dc.app.vault.getAbstractFileByPath(p.$path);
+                    if (!file) continue;
+                    const text = await dc.app.vault.cachedRead(file);
+                    m.set(p.$path, transform(text, p.$path));
+                } catch { /* ignore unreadable files */ }
+            }
+            if (!cancelled) setStatsMap(m);
+        })();
+        return () => { cancelled = true; };
+    }, [pathsKey]);
+    return statsMap;
+}
+
+return { useDebouncedSearch, useSortBy, useMultiFilter, useBodyMap, useBodyStats };

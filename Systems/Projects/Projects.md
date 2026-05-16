@@ -1,35 +1,16 @@
 ---
+dashboard: true
 tags:
   - system/projects
 ---
-
 # Projects
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, EditText, StatusSelect, SearchableSelect, useSortBy, SortBar, useDebouncedSearch, MultiSelectPills, useMultiFilter, computeLintMap, useLintState, LintPanel, lintColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, EditText, StatusSelect, SearchableSelect, useSortBy, SortBar, useDebouncedSearch, useBodyMap, MultiSelectPills, useMultiFilter, FilterRow, computeLintMap, useLintState, LintPanel, lintColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { lintProject, PROJ_ISSUE_CODES, PROJ_ISSUE_LABELS } = await dc.require("Toolkit/Datacore/LintRules.js");
 
 const PROJECT_STATUS = ["Idea", "Active", "Paused", "Shipped", "Archived"];
-
-const PROJ_ISSUE_CODES = ["no-category", "empty-goals"];
-const PROJ_ISSUE_LABELS = { "no-category": "no category", "empty-goals": "Goals empty" };
-
-function sectionIsEmpty(body, sectionName) {
-    const esc = sectionName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`##\\s+${esc}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
-    const m = body.match(re);
-    if (!m) return true;
-    return !m[1].trim();
-}
-
-function lintProject(project, body) {
-    const issues = [];
-    if (!String(project.value("category") ?? "").trim())
-        issues.push({ code: "no-category", severity: "warn", message: "no category" });
-    if (sectionIsEmpty(body, "Goals"))
-        issues.push({ code: "empty-goals", severity: "warn", message: "Goals section empty" });
-    return issues;
-}
 
 return function View() {
     const projects = dc.useQuery(V.q("system/projects/project", "Systems/Projects"));
@@ -50,23 +31,7 @@ return function View() {
         return c;
     }, [projects]);
 
-    const [bodyMap, setBodyMap] = dc.useState(new Map());
-    const pathsKey = projects.map(p => p.$path).join("|");
-    dc.useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            const m = new Map();
-            for (const p of projects) {
-                try {
-                    const file = dc.app.vault.getAbstractFileByPath(p.$path);
-                    if (!file) continue;
-                    m.set(p.$path, await dc.app.vault.cachedRead(file));
-                } catch (e) { /* ignore */ }
-            }
-            if (!cancelled) setBodyMap(m);
-        })();
-        return () => { cancelled = true; };
-    }, [pathsKey]);
+    const bodyMap = useBodyMap(projects);
 
     const lintIssues = dc.useMemo(() => computeLintMap(projects, p => lintProject(p, bodyMap.get(p.$path) ?? "")), [projects, bodyMap]);
     const { issueFilter, setIssueFilter, issueCounts, totalIssues: totalLintIssues, itemsWithLint: projectsWithLint } =
@@ -111,12 +76,12 @@ return function View() {
             />
             <div style={{ marginBottom: "8px" }}>
                 <MultiSelectPills label="Status:" options={PROJECT_STATUS} selected={statusFilters} onToggle={toggleStatus} onClear={clearStatusFilters} counts={counts} />
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em", flexWrap: "wrap" }}>
+                <FilterRow>
                     <span style={{ opacity: 0.7 }}>Category:</span>
                     <SearchableSelect value={categoryFilter} options={["All", ...categories]} onValueChange={setCategoryFilter} />
                     <input type="text" placeholder="🔍 search…" value={searchInput} onChange={e => setSearchInput(e.target.value)} style={{ width: "160px" }} />
                     <SortBar fields={PROJECT_SORT_FIELDS} field={projSortField} setField={setProjSortField} dir={projSortDir} setDir={setProjSortDir} />
-                </div>
+                </FilterRow>
             </div>
             <LintPanel totalIssues={totalLintIssues} itemsWithLint={projectsWithLint}
                 codes={PROJ_ISSUE_CODES} labels={PROJ_ISSUE_LABELS}

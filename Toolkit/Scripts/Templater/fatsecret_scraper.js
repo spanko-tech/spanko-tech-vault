@@ -1,4 +1,4 @@
-﻿async function scrap(tp, url) {
+async function scrap(tp, url) {
     try {
         const html = await tp.obsidian.request({
             url,

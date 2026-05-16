@@ -1,4 +1,5 @@
 ---
+dashboard: true
 tags:
   - system/releases
 ---
@@ -7,31 +8,9 @@ tags:
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, StatusSelect, FilterPills, useDebouncedSearch, SearchableSelect, useSortBy, SortBar, computeLintMap, useLintState, LintPanel } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, StatusSelect, FilterPills, useDebouncedSearch, useBodyMap, SearchableSelect, useSortBy, SortBar, FilterRow, computeLintMap, useLintState, LintPanel } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { lintRelease, REL_ISSUE_CODES, REL_ISSUE_LABELS, sectionContent } = await dc.require("Toolkit/Datacore/LintRules.js");
 const fmtDate = V.fmtDate;
-
-const REL_ISSUE_CODES = ["no-highlights", "no-changes", "breaking-empty"];
-const REL_ISSUE_LABELS = { "no-highlights": "no highlights", "no-changes": "no changes", "breaking-empty": "breaking empty" };
-
-function sectionContent(body, name) {
-    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`##\\s+${esc}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "i");
-    const m = body.match(re);
-    return m ? m[1].trim() : null;
-}
-
-function lintRelease(r, body) {
-    const issues = [];
-    const status = r.value("status") ?? "Planned";
-    const breaking = r.value("breaking") === "Yes";
-    if (status !== "Planned") {
-        if (!sectionContent(body, "Highlights")) issues.push({ code: "no-highlights", severity: "warn", message: "Highlights empty" });
-        if (!sectionContent(body, "Added") && !sectionContent(body, "Changed") && !sectionContent(body, "Fixed"))
-            issues.push({ code: "no-changes", severity: "warn", message: "Added/Changed/Fixed all empty" });
-    }
-    if (breaking && !sectionContent(body, "Breaking")) issues.push({ code: "breaking-empty", severity: "error", message: "Breaking section empty" });
-    return issues;
-}
 
 function DateEditor({ item, field }) {
     const [editing, setEditing] = dc.useState(false);
@@ -68,23 +47,7 @@ return function View() {
     const [relCategoryFilter, setRelCategoryFilter] = dc.useState("All");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
 
-    const [bodyMap, setBodyMap] = dc.useState(new Map());
-    const pathsKey = releases.map(r => r.$path).join("|");
-    dc.useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            const m = new Map();
-            for (const r of releases) {
-                try {
-                    const file = dc.app.vault.getAbstractFileByPath(r.$path);
-                    if (!file) continue;
-                    m.set(r.$path, await dc.app.vault.cachedRead(file));
-                } catch (e) { /* ignore */ }
-            }
-            if (!cancelled) setBodyMap(m);
-        })();
-        return () => { cancelled = true; };
-    }, [pathsKey]);
+    const bodyMap = useBodyMap(releases);
 
     const RELEASE_STATUS = ["Planned", "In Progress", "Released"];
     const STATUS_COLOR   = { Planned: "var(--color-orange)", "In Progress": "var(--color-blue)", Released: "var(--color-green)" };
@@ -182,20 +145,20 @@ return function View() {
             <div style={{ marginBottom: "10px" }}>
                 <FilterPills label="Status:" options={["All", ...RELEASE_STATUS]} value={statusFilter} onChange={setStatusFilter} />
                 {/* Category + Project */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85em", marginBottom: "4px" }}>
+                <FilterRow style={{ marginBottom: "4px" }}>
                     <span style={{ opacity: 0.7 }}>Category:</span>
                     <SearchableSelect value={relCategoryFilter} options={["All", ...projectCategories]}
                         onValueChange={v => { setRelCategoryFilter(v); setProjFilter("All"); }} />
                     <span style={{ opacity: 0.7 }}>Project:</span>
                     <SearchableSelect value={projFilter} options={filteredProjectNames} onValueChange={setProjFilter} />
-                </div>
+                </FilterRow>
                 {/* Search + Sort */}
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                <FilterRow style={{ marginBottom: 0, marginTop: "2px" }}>
                     <input type="text" placeholder="🔍 search releases…" value={searchInput}
                         onChange={e => setSearchInput(e.target.value)}
                         style={{ width: "220px" }} />
                     <SortBar fields={RELEASE_SORT_FIELDS} field={relSortField} setField={setRelSortField} dir={relSortDir} setDir={setRelSortDir} />
-                </div>
+                </FilterRow>
             </div>
             <LintPanel totalIssues={totalRelIssues} itemsWithLint={relWithIssues}
                 codes={REL_ISSUE_CODES} labels={REL_ISSUE_LABELS}

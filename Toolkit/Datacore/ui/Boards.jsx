@@ -1,4 +1,4 @@
-﻿// Kanban-style board components.
+// Kanban-style board components.
 // Loaded with: const B = await dc.require("Toolkit/Datacore/ui/Boards.jsx");
 
 /**

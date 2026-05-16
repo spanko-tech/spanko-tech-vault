@@ -1,4 +1,4 @@
-﻿---
+---
 tags: [snippet]
 ---
 
@@ -39,7 +39,7 @@ function Editor() {
     const items = cur.value("recipe_items") ?? [];
     const portions = Number(cur.value("portions") ?? 1) || 1;
 
-    const ingredients = dc.useQuery('@page and #food/ingredient and path("Systems/Food")');
+    const ingredients = dc.useQuery('@page and #system/food/ingredient and path("Systems/Food")');
     const ingByName = dc.useMemo(() => {
         const m = new Map();
         for (const i of ingredients) m.set(i.$name, i);

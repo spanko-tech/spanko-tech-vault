@@ -1,4 +1,4 @@
-﻿// Layout & display primitives. No I/O, no Vault dependency.
+// Layout & display primitives. No I/O, no Vault dependency.
 // Loaded with: const L = await dc.require("Toolkit/Datacore/ui/Layout.jsx");
 
 const memo = dc.preact?.memo ?? (c => c);
@@ -111,7 +111,7 @@ function Section({ title, defaultOpen = false, children }) {
  * Renders as a clickable button when closed; an input+dropdown when open.
  * @param {{value: string, options: (string|{value:string,label:string})[], onValueChange: (v:string)=>void}} props
  */
-const SearchableSelect = memo(function SearchableSelect({ value, options, onValueChange }) {
+const SearchableSelect = memo(function SearchableSelect({ value, options, onValueChange, style }) {
     const normed = (options ?? []).map(o => typeof o === "string" ? { value: o, label: o } : o);
     const selectedLabel = normed.find(o => o.value === value)?.label ?? (value != null ? String(value) : "");
     const [open, setOpen] = dc.useState(false);
@@ -124,20 +124,18 @@ const SearchableSelect = memo(function SearchableSelect({ value, options, onValu
     }, [normed, query]);
     const doOpen = () => { setQuery(""); setOpen(true); setTimeout(() => inputRef.current?.focus(), 0); };
     const doSelect = (v) => { onValueChange(v); setOpen(false); setQuery(""); };
+    const baseStyle = { cursor: "pointer", padding: "2px 8px", border: "1px solid var(--background-modifier-border)", borderRadius: "4px", background: "transparent", fontSize: "inherit", display: "inline-flex", alignItems: "center", gap: "4px" };
     if (!open) {
         return (
-            <button onClick={doOpen} style={{
-                cursor: "pointer", padding: "2px 8px",
-                border: "1px solid var(--background-modifier-border)",
-                borderRadius: "4px", background: "transparent",
-                fontSize: "inherit", display: "inline-flex", alignItems: "center", gap: "4px"
-            }}>
-                {selectedLabel} <span style={{ opacity: 0.4, fontSize: "0.8em" }}>▾</span>
+            <button onClick={doOpen} style={{ ...baseStyle, ...style }}>
+                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left" }}>{selectedLabel}</span>
+                <span style={{ opacity: 0.4, fontSize: "0.8em", flexShrink: 0 }}>▾</span>
             </button>
         );
     }
+    const inputWidth = (style?.width) ? "100%" : "150px";
     return (
-        <span style={{ position: "relative", display: "inline-block" }}>
+        <span style={{ position: "relative", display: "inline-block", ...(style?.width ? { width: style.width } : {}) }}>
             <input ref={inputRef} type="text" value={query}
                 onInput={e => setQuery(e.currentTarget.value)}
                 onKeyDown={e => {
@@ -146,7 +144,7 @@ const SearchableSelect = memo(function SearchableSelect({ value, options, onValu
                 }}
                 onBlur={() => setTimeout(() => setOpen(false), 160)}
                 placeholder={selectedLabel}
-                style={{ width: "150px", padding: "2px 6px", fontSize: "inherit" }} />
+                style={{ width: inputWidth, padding: "2px 6px", fontSize: "inherit" }} />
             <div style={{
                 position: "absolute", top: "calc(100% + 2px)", left: 0, zIndex: 9999,
                 background: "var(--background-primary)",
@@ -192,4 +190,65 @@ const SortBar = memo(function SortBar({ fields, field, setField, dir, setDir }) 
     );
 });
 
-return { Pill, KPI, KPIRow, TabStrip, FilterPills, MultiSelectPills, Section, SearchableSelect, SortBar };
+/**
+ * Consistent empty-state display when a section or filtered list has no items.
+ * @param {{icon?: string, title?: string, subtitle?: string}} props
+ */
+function EmptyState({ icon = "📭", title = "No items", subtitle }) {
+    return (
+        <div style={{
+            padding: "24px 16px", textAlign: "center",
+            background: "var(--background-secondary)", borderRadius: "6px", opacity: 0.7
+        }}>
+            <div style={{ fontSize: "1.8em", marginBottom: "6px" }}>{icon}</div>
+            <div style={{ fontSize: "0.95em", fontWeight: 500 }}>{title}</div>
+            {subtitle && <div style={{ fontSize: "0.82em", opacity: 0.75, marginTop: "4px" }}>{subtitle}</div>}
+        </div>
+    );
+}
+
+/**
+ * Consistent filter/search bar wrapper. Provides the standard flex layout for
+ * filter controls. Children can be labels, SearchableSelects, inputs, etc.
+ * @param {{children: any, style?: object}} props
+ */
+function FilterRow({ children, style }) {
+    return (
+        <div style={{
+            display: "flex", gap: "8px", flexWrap: "wrap",
+            marginBottom: "10px", alignItems: "center", ...style
+        }}>
+            {children}
+        </div>
+    );
+}
+
+/**
+ * Build a dc.Table column with a 🗑 trash button on each row.
+ * Uses vault.trash (moves to system trash — recoverable).
+ * @param {string} [noun="item"] Singular noun used in the confirm dialog.
+ * @returns {object} Column descriptor compatible with dc.Table `columns` prop.
+ * @example
+ *   columns={[..., deleteColumn("note")]}
+ */
+function deleteColumn(noun = "item") {
+    return {
+        id: " ",
+        value: () => 0,
+        render: (_, item) => (
+            <button title={`Delete this ${noun}`}
+                onClick={async () => {
+                    if (!window.confirm(`Delete "${item.$name}"? This cannot be undone.`)) return;
+                    const file = dc.app.vault.getAbstractFileByPath(item.$path);
+                    if (file) await dc.app.vault.trash(file, true);
+                    new window.Notice("Deleted");
+                }}
+                style={{ fontSize: "0.75em", padding: "1px 5px", cursor: "pointer",
+                    color: "var(--text-error)", background: "none", border: "none" }}>
+                🗑
+            </button>
+        )
+    };
+}
+
+return { Pill, KPI, KPIRow, TabStrip, FilterPills, MultiSelectPills, Section, SearchableSelect, SortBar, EmptyState, FilterRow, deleteColumn };

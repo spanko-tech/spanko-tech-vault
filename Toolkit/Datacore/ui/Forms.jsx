@@ -1,4 +1,4 @@
-﻿// Editable cells, inputs and the new-note creation form.
+// Editable cells, inputs and the new-note creation form.
 // Loaded with: const F = await dc.require("Toolkit/Datacore/ui/Forms.jsx");
 
 const V = await dc.require("Toolkit/Datacore/Vault.js");
@@ -138,7 +138,7 @@ function NewForm({
             await V.ensureFolder(dir);
             const path = `${dir}/${name}.md`;
             if (dc.app.vault.getAbstractFileByPath(path)) {
-                if (openOnCreate) dc.app.workspace.openLinkText(path, "");
+                if (openOnCreate) dc.app.workspace.openLinkText(path, "", "tab");
                 return;
             }
             const fm = { ...defaults };
@@ -170,7 +170,7 @@ function NewForm({
             await dc.app.vault.create(path, front + heading + bodyStr);
             V.notify(`Created ${name}`);
             setVals(prev => ({ ...prev, name: "" }));
-            if (openOnCreate) dc.app.workspace.openLinkText(path, "");
+            if (openOnCreate) dc.app.workspace.openLinkText(path, "", "tab");
             onCreated?.(path);
         } catch (e) { console.error(e); V.notify(`Create failed: ${e.message}`); }
     };
@@ -193,7 +193,10 @@ function NewForm({
     const renderField = (f) => {
         const value = String(vals[f.name] ?? "");
         if (f.type === "select") {
-            return <dc.VanillaSelect value={value || (f.options?.[0] ?? "")} options={(f.options ?? []).map(o => ({ value: o, label: o }))} onValueChange={v => set(f.name, v)} />;
+            const rawOpts = typeof f.options === "function" ? f.options(vals) : (f.options ?? []);
+            const opts = rawOpts.map(o => typeof o === "object" ? o : { value: o, label: o });
+            const cur = value || (opts[0]?.value ?? "");
+            return <dc.VanillaSelect value={cur} options={opts} onValueChange={v => set(f.name, v)} />;
         }
         if (f.type === "checkbox") {
             return <input type="checkbox" checked={!!vals[f.name]} onChange={e => set(f.name, e.target.checked)} />;

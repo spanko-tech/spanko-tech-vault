@@ -1,4 +1,4 @@
-﻿<%*
+<%*
 let url = await tp.system.prompt("Paste FatSecret food URL:");
 if (!url) { new Notice("No URL — aborting."); return; }
 const res = await tp.user.fatsecret_scraper.scrap(tp, url);
@@ -7,7 +7,7 @@ const parsed = tp.user.fatsecret_scraper.parseServing(res.serving);
 const safe = (res.name || "Untitled").replace(/[<>:"/\\|?*]/g, "");
 await tp.file.rename(safe);
 -%>---
-tags: [food/ingredient]
+tags: [system/food/ingredient]
 serving_size: <% parsed.size %>
 unit: <% parsed.unit %>
 kcal_per_serving: <% res.kcal %>

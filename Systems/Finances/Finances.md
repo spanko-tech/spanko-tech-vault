@@ -1,8 +1,10 @@
 ---
+dashboard: true
 aliases: []
 tags:
   - system/finances
   - datacore/dashboard
+baseCurrency: CZK
 EURExchangeRate: 25
 USDExchangeRate: 22
 ---
@@ -11,8 +13,9 @@ USDExchangeRate: 22
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
+const W = await dc.require("Toolkit/Datacore/Web.js");
 const { NewForm, useSortBy, SortBar } = await dc.require("Toolkit/Datacore/UI.jsx");
-const { setField } = V;
+const { setField, setFields } = V;
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const STATUSES   = ["Active", "Inactive"];
@@ -20,8 +23,6 @@ const FREQUENCIES = ["Monthly", "Yearly"];
 
 const EXPENSE_CATS = ["Service", "Games", "Development", "Investment", "Savings", "Life"];
 const INCOME_CATS  = ["Work", "Benefit", "Other"];
-const CURRENCIES   = ["CZK", "EUR", "USD"];
-
 function convertCustomDate(customDate, targetMonth, targetYear) {
     if (!customDate) return new Date(targetYear, targetMonth, 1);
     if (customDate.includes(".X")) {
@@ -61,12 +62,14 @@ function shouldShowYearly(dateString, currentMonth) {
 
 return function View() {
     const cur     = dc.useCurrentFile();
-    const eurRate = Number(cur.value("EURExchangeRate") ?? 25);
-    const usdRate = Number(cur.value("USDExchangeRate") ?? 22);
+    const eurRate      = Number(cur.value("EURExchangeRate") ?? 25);
+    const usdRate      = Number(cur.value("USDExchangeRate") ?? 22);
+    const baseCurrency = String(cur.value("baseCurrency") ?? "CZK").toUpperCase();
+    const CURRENCIES   = [...new Set([baseCurrency, "EUR", "USD"])];
     const [selMo, setSelMo] = dc.useState(MONTHS[new Date().getMonth()]);
     const selectedMonth = Math.max(0, MONTHS.indexOf(selMo));
     const currentYear   = new Date().getFullYear();
-    const rates = { CZK: 1, EUR: eurRate, USD: usdRate };
+    const rates = Object.fromEntries(CURRENCIES.map(cur => [cur, cur === baseCurrency ? 1 : cur === "EUR" ? eurRate : usdRate]));
 
     const incomes  = dc.useQuery('@page and #system/finances/income  and path("Systems/Finances")');
     const expenses = dc.useQuery('@page and #system/finances/expense and path("Systems/Finances")');
@@ -85,11 +88,11 @@ return function View() {
                 const isYearly  = freq === "Yearly" && shouldShowYearly(date, selectedMonth);
                 if (!isMonthly && !isYearly) continue;
                 const d        = convertCustomDate(date, selectedMonth, currentYear);
-                const currency = p.value("currency") ?? "CZK";
-                const amtCZK   = amount * (rates[currency] || 1);
+                const currency = p.value("currency") ?? baseCurrency;
+                const amtBase  = amount * (rates[currency] || 1);
                 transactions.push({
                     page: p, date: d,
-                    amount:   type === "income" ? amtCZK : -amtCZK,
+                    amount:   type === "income" ? amtBase : -amtBase,
                     rawAmount: amount, currency,
                     category: p.value("category") ?? "",
                     frequency: freq,
@@ -173,17 +176,17 @@ return function View() {
                 if (isNaN(amount)) continue;
                 const freq = p.value("frequency");
                 const date = p.value("start_date") ?? "";
-                const currency = p.value("currency") ?? "CZK";
-                const amtCZK = amount * (rates[currency] || 1);
+                const currency = p.value("currency") ?? baseCurrency;
+                const amtBase = amount * (rates[currency] || 1);
                 const cat = p.value("category") ?? "";
                 const bucket = type === "income"
                     ? "income"
                     : (cat === "Savings" || cat === "Investment" ? "savings" : "expenses");
                 if (freq === "Monthly") {
-                    for (const row of months) row[bucket] += amtCZK;
+                    for (const row of months) row[bucket] += amtBase;
                 } else if (freq === "Yearly") {
                     for (const row of months) {
-                        if (shouldShowYearly(date, row.i)) row[bucket] += amtCZK;
+                        if (shouldShowYearly(date, row.i)) row[bucket] += amtBase;
                     }
                 }
             }
@@ -209,6 +212,26 @@ return function View() {
     const [txFreqFilter, setTxFreqFilter] = dc.useState("All");
     const [txCatFilter, setTxCatFilter] = dc.useState(new Set());
     const [txMinAmt, setTxMinAmt] = dc.useState("");
+    const [fetchingRates, setFetchingRates] = dc.useState(false);
+
+    async function fetchRates() {
+        setFetchingRates(true);
+        try {
+            // Always use EUR as base — most reliable. rates[X] = "how many X per 1 EUR"
+            const symbolsNeeded = [...new Set([baseCurrency, "USD"])].filter(c => c !== "EUR");
+            const symbolsParam  = symbolsNeeded.length ? symbolsNeeded.join(",") : "USD";
+            const r = await W.httpJson(`https://api.frankfurter.dev/v1/latest?base=EUR&symbols=${symbolsParam}`);
+            if (r.ok && r.data?.rates) {
+                const basePerEur = baseCurrency === "EUR" ? 1 : (r.data.rates[baseCurrency] ?? eurRate);
+                const usdPerEur  = r.data.rates.USD ?? 1;
+                const newEurRate = Math.round(basePerEur * 100) / 100;
+                const newUsdRate = baseCurrency === "USD" ? 1 : Math.round((basePerEur / usdPerEur) * 100) / 100;
+                await setFields(cur, { EURExchangeRate: newEurRate, USDExchangeRate: newUsdRate });
+                V.notify(`Rates updated (ECB ${r.data.date}): 1 EUR = ${newEurRate} ${baseCurrency} · 1 USD = ${newUsdRate} ${baseCurrency}`);
+            } else { V.notify("Failed to fetch rates"); }
+        } catch { V.notify("Failed to fetch rates"); }
+        finally { setFetchingRates(false); }
+    }
 
     const txCategories = dc.useMemo(() => {
         const s = new Set();
@@ -230,9 +253,9 @@ return function View() {
         const minAmt = Number(txMinAmt);
         if (!isNaN(minAmt) && minAmt > 0) {
             const amt = Number(r.page.value("amount") ?? 0);
-            const cur = r.page.value("currency") ?? "CZK";
-            const czk = amt * (rates[cur] || 1);
-            if (czk < minAmt) return false;
+            const cur = r.page.value("currency") ?? baseCurrency;
+            const base = amt * (rates[cur] || 1);
+            if (base < minAmt) return false;
         }
         return true;
     });
@@ -249,7 +272,7 @@ return function View() {
         if (field === "type")  return item.type ?? "";
         if (field === "amount") {
             const amt = Number(item.page.value("amount") ?? 0);
-            const cur = item.page.value("currency") ?? "CZK";
+            const cur = item.page.value("currency") ?? baseCurrency;
             return String(Math.round(amt * (rates[cur] || 1)));
         }
         return String(item.page.value(field) ?? "");
@@ -260,9 +283,9 @@ return function View() {
         let sum = 0;
         for (const r of txFiltered) {
             const amt = Number(r.page.value("amount") ?? 0);
-            const cur = r.page.value("currency") ?? "CZK";
-            const czk = amt * (rates[cur] || 1);
-            sum += r.type === "income" ? czk : -czk;
+            const cur = r.page.value("currency") ?? baseCurrency;
+            const base = amt * (rates[cur] || 1);
+            sum += r.type === "income" ? base : -base;
         }
         return sum;
     }, [txFiltered, rates]);
@@ -284,10 +307,10 @@ return function View() {
             }
         },
         {
-            id: "Amount (CZK)",
+            id: `Amount (${baseCurrency})`,
             value: r => {
                 const amt = Number(r.page.value("amount") ?? 0);
-                const cur = r.page.value("currency") ?? "CZK";
+                const cur = r.page.value("currency") ?? baseCurrency;
                 return Math.round(amt * (rates[cur] || 1));
             },
             render: (v, r) => (
@@ -310,7 +333,7 @@ return function View() {
                     fields={[
                         { name: "name", label: "Income name" },
                         { name: "amount", type: "number", width: "100px" },
-                        { name: "currency", type: "select", options: ["CZK", "EUR", "USD"], default: "CZK" },
+                        { name: "currency", type: "select", options: CURRENCIES, default: baseCurrency },
                         { name: "category", type: "select", options: ["Work", "Benefit", "Other"], default: "Work" },
                         { name: "frequency", type: "select", options: ["Monthly", "Yearly"], default: "Monthly" },
                         { name: "status", type: "select", options: ["Active", "Inactive"], default: "Active" },
@@ -326,7 +349,7 @@ return function View() {
                     fields={[
                         { name: "name", label: "Expense name" },
                         { name: "amount", type: "number", width: "100px" },
-                        { name: "currency", type: "select", options: ["CZK", "EUR", "USD"], default: "CZK" },
+                        { name: "currency", type: "select", options: CURRENCIES, default: baseCurrency },
                         { name: "category", type: "select", options: ["Service", "Games", "Development", "Investment", "Savings", "Life"], default: "Life" },
                         { name: "frequency", type: "select", options: ["Monthly", "Yearly"], default: "Monthly" },
                         { name: "status", type: "select", options: ["Active", "Inactive"], default: "Active" },
@@ -344,22 +367,26 @@ return function View() {
                     />
                 </label>
                 <label>EUR rate:&nbsp;
-                    <dc.Textbox type="number" defaultValue={String(eurRate)}
+                    <dc.Textbox key={eurRate} type="number" step="0.01" defaultValue={String(eurRate)}
                         onBlur={e => setField(cur, "EURExchangeRate", Number(e.currentTarget.value))}
-                        style={{ width: "70px" }} />
+                        style={{ width: "80px" }} />
                 </label>
                 <label>USD rate:&nbsp;
-                    <dc.Textbox type="number" defaultValue={String(usdRate)}
+                    <dc.Textbox key={usdRate} type="number" step="0.01" defaultValue={String(usdRate)}
                         onBlur={e => setField(cur, "USDExchangeRate", Number(e.currentTarget.value))}
-                        style={{ width: "70px" }} />
+                        style={{ width: "80px" }} />
                 </label>
+                <button onClick={fetchRates} disabled={fetchingRates}
+                    style={{ padding: "3px 10px", fontSize: "0.82em", cursor: fetchingRates ? "default" : "pointer" }}>
+                    {fetchingRates ? "⟳ Fetching…" : "⟳ Fetch rates"}
+                </button>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "8px", marginBottom: "12px" }}>
-                <dc.Card title="Income"   content={`${Math.round(data.totalIncome).toLocaleString()} CZK`} />
-                <dc.Card title="Expenses" content={`${Math.round(data.totalExpenses).toLocaleString()} CZK`} />
-                <dc.Card title="Savings"  content={`${Math.round(data.totalSavings).toLocaleString()} CZK`} />
-                <dc.Card title="Net"      content={`${Math.round(data.netIncome).toLocaleString()} CZK`} />
+                <dc.Card title="Income"   content={`${Math.round(data.totalIncome).toLocaleString()} ${baseCurrency}`} />
+                <dc.Card title="Expenses" content={`${Math.round(data.totalExpenses).toLocaleString()} ${baseCurrency}`} />
+                <dc.Card title="Savings"  content={`${Math.round(data.totalSavings).toLocaleString()} ${baseCurrency}`} />
+                <dc.Card title="Net"      content={`${Math.round(data.netIncome).toLocaleString()} ${baseCurrency}`} />
             </div>
 
             <h3>Calendar — {firstDay.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</h3>
@@ -379,7 +406,7 @@ return function View() {
             </table>
 
             <h3 style={{ marginTop: "20px" }}>Yearly Overview — {currentYear}</h3>
-            <p style={{ fontSize: "0.85em", opacity: 0.75 }}>Sum of all <em>Active</em> recurring items projected per month (in CZK at current rates).</p>
+            <p style={{ fontSize: "0.85em", opacity: 0.75 }}>Sum of all <em>Active</em> recurring items projected per month (in {baseCurrency} at current rates).</p>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                     <tr>
@@ -420,7 +447,7 @@ return function View() {
             <p style={{ fontSize: "0.85em", opacity: 0.75 }}>Your master list of <strong>recurring monthly &amp; yearly</strong> income and expenses. Category is editable inline; open the note to change frequency, status, or currency.</p>
 
             <div style={{ margin: "8px 0" }}>
-                {/* Line 1: Type · Freq · Sort · Min CZK · Total */}
+                {/* Line 1: Type · Freq · Sort · Min Amount · Total */}
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "6px" }}>
                     <span style={{ fontSize: "0.85em", opacity: 0.7 }}>Type:</span>
                     {["All", "Income", "Expense"].map(t => (
@@ -437,13 +464,13 @@ return function View() {
                     <SortBar fields={TX_SORT_FIELDS} field={txSortField} setField={setTxSortField} dir={txSortDir} setDir={setTxSortDir} />
                     <span style={{ width: "1px", height: "20px", background: "var(--background-modifier-border)", margin: "0 4px" }} />
                     <label style={{ fontSize: "0.85em", display: "flex", alignItems: "center", gap: "4px" }}>
-                        Min CZK:
+                        Min {baseCurrency}:
                         <dc.Textbox type="number" value={String(txMinAmt)} placeholder="0"
                             onInput={e => setTxMinAmt(e.currentTarget.value)}
                             style={{ width: "80px" }} />
                     </label>
                     <span style={{ marginLeft: "auto", fontSize: "0.9em", opacity: 0.8 }}>
-                        {txFiltered.length} items · net <strong style={{ color: txFilteredTotal >= 0 ? "var(--color-green)" : "var(--color-red)" }}>{Math.round(txFilteredTotal).toLocaleString()} CZK</strong>
+                        {txFiltered.length} items · net <strong style={{ color: txFilteredTotal >= 0 ? "var(--color-green)" : "var(--color-red)" }}>{Math.round(txFilteredTotal).toLocaleString()} {baseCurrency}</strong>
                     </span>
                 </div>
                 {/* Line 2: Category pills */}

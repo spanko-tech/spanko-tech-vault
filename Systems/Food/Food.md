@@ -1,29 +1,21 @@
 ---
+dashboard: true
 aliases: []
 tags:
   - system/food
   - datacore/dashboard
-goal_kcal: 2000
-goal_protein: 100
-goal_carbs: 200
-goal_fat: 40
-goal_fiber: 30
-plan_items:
-  - food:
-      path: Systems/Food/Recipes/Omelette.md
-      type: file
-      embed: false
-    amount: 1
-  - food: "[[Cherry Tomatoes]]"
-    amount: 300
+plan_items: []
+goal_kcal: 2300
+goal_protein: 140
+goal_carbs: 270
+goal_fat: 60
+goal_fiber: 35
 efficiency_numerator: protein
 efficiency_denominator: kcal
 efficiency_scale: 100
 ---
 
 # Food
-
-Track recipes, ingredients, and meal planning with nutrition calculations.
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
@@ -104,7 +96,7 @@ return function View() {
                         const tpl = dc.app.vault.getAbstractFileByPath(tplPath);
                         const folder = dc.app.vault.getAbstractFileByPath(folderPath);
                         if (!tpl) { new window.Notice(`Template not found: ${tplPath}`); return; }
-                        await templater.templater.create_new_note_from_template(tpl, folder, undefined, true);
+                        await templater.templater.create_new_note_from_template(tpl, folder, undefined, false);
                     } catch (e) { new window.Notice(`FatSecret failed: ${e.message}`); }
                 }} style={{ marginRight: "6px", marginLeft: "6px" }}>+ Ingredient via FatSecret</button>
             </div>
@@ -270,7 +262,10 @@ return function View() {
         await setField(cur, "plan_items", next);
     };
 
-    const clearPlan = async () => { await setField(cur, "plan_items", []); };
+    const clearPlan = async () => {
+        if (!window.confirm("Clear all meal log entries for today? This cannot be undone.")) return;
+        await setField(cur, "plan_items", []);
+    };
 
     const effValueOf = (m) => {
         const num = m[effNum] ?? 0;
@@ -513,7 +508,22 @@ return function View() {
         { id: "Carbs",         value: r => r.carbs,   render: (_, r) => `${r.carbs}g (${pct(r.carbs, goalCarbs)}%)` },
         { id: "Fat",           value: r => r.fat,     render: (_, r) => `${r.fat}g (${pct(r.fat, goalFat)}%)` },
         { id: "Fiber",         value: r => r.fiber,   render: (_, r) => `${r.fiber}g (${pct(r.fiber, goalFiber)}%)` },
-        { id: effHeader,       value: r => r.efficiency }
+        { id: effHeader,       value: r => r.efficiency },
+        {
+            id: " ", value: () => 0,
+            render: (_, r) => (
+                <button title="Delete this recipe"
+                    onClick={async () => {
+                        if (!window.confirm(`Delete "${r.page.$name}"? This cannot be undone.`)) return;
+                        const file = dc.app.vault.getAbstractFileByPath(r.page.$path);
+                        if (file) await dc.app.vault.trash(file, true);
+                        new window.Notice("Deleted");
+                    }}
+                    style={{ fontSize: "0.75em", padding: "1px 5px", cursor: "pointer", color: "var(--text-error)", background: "none", border: "none" }}>
+                    🗑
+                </button>
+            )
+        }
     ];
 
     return (
@@ -595,7 +605,22 @@ return function View() {
         { id: "Protein",    value: r => r.protein,           render: (_, r) => <NumCell page={r.page} field="protein_per_serving" value={r.protein} suffix="g" /> },
         { id: "Carbs",      value: r => r.carbs,             render: (_, r) => <NumCell page={r.page} field="carbs_per_serving"   value={r.carbs}   suffix="g" /> },
         { id: "Fat",        value: r => r.fat,               render: (_, r) => <NumCell page={r.page} field="fat_per_serving"     value={r.fat}     suffix="g" /> },
-        { id: "Fiber",      value: r => r.fiber,             render: (_, r) => <NumCell page={r.page} field="fiber_per_serving"   value={r.fiber}   suffix="g" /> }
+        { id: "Fiber",      value: r => r.fiber,             render: (_, r) => <NumCell page={r.page} field="fiber_per_serving"   value={r.fiber}   suffix="g" /> },
+        {
+            id: " ", value: () => 0,
+            render: (_, r) => (
+                <button title="Delete this ingredient"
+                    onClick={async () => {
+                        if (!window.confirm(`Delete "${r.page.$name}"? This cannot be undone.`)) return;
+                        const file = dc.app.vault.getAbstractFileByPath(r.page.$path);
+                        if (file) await dc.app.vault.trash(file, true);
+                        new window.Notice("Deleted");
+                    }}
+                    style={{ fontSize: "0.75em", padding: "1px 5px", cursor: "pointer", color: "var(--text-error)", background: "none", border: "none" }}>
+                    🗑
+                </button>
+            )
+        }
     ];
 
     return (

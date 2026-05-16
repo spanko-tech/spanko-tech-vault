@@ -1,77 +1,55 @@
 ---
+dashboard: true
 aliases: []
 tags:
-  - system/cogito
+  - system/cogito/system
   - system/cogito/index
   - datacore/dashboard
 ---
 
 # Cogito
 
-*Knowledge management system for notes, media consumption, and learning.*
-
-- **Notes** → `Systems/Cogito/Notes/`, tag `#system/cogito/note` — promote Stub → Draft → Solid → Reference
-- **Inbox** → `Systems/Cogito/Inbox/`, tag `#system/cogito/inbox` — capture without guilt; weekly skim
-- **Drawings** → `Systems/Cogito/Drawings/` — Excalidraw lives here
-- **MOCs** → `Systems/Cogito/MOCs/`, tag `#system/cogito/moc` — maps of content (curated topic indexes)
-- **Media** → `Systems/Cogito/Media/`, tag `#system/cogito/media` — consumption + reviews; spawns Knowledge notes
-
 | Domain | Voice | Schema |
 |---|---|---|
-| **Knowledge** | Descriptive — what X is, how it works | Summary · Why it matters · Example · References |
-| **Engineering** | Decisive — what I decided for X I'm building | Context · Approach · Consequences · References |
+| **Knowledge** | Descriptive — what X is, how it works | Summary · How it works · Why it matters · References |
 | **Process** | Imperative — repeatable steps | When to use · Steps · Watch out for · References |
 | **Idea** | Speculative — wouldn't it be cool if… | Pitch · Why · Open questions |
-| **Basic** | Free-form — game notes, scratch thoughts, anything that doesn't need a schema | Notes |
+| **Reference** | Reference material — personal cheatsheets, configs, game notes | Overview · Notes |
 
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, SearchableSelect, useSortBy, SortBar } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, Pill, SearchableSelect, useSortBy, SortBar, useDebouncedSearch, deleteColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
+const {
+    STUB_AGE_DAYS, MIN_BACKLINKS_EVERGREEN, STALE_BACKLOG_DAYS,
+    INBOX_STALE_DAYS,
+    DOMAINS, DOMAIN_SCHEMAS, DEFAULT_SCHEMA, schemaFor,
+    NOTE_ISSUE_CODES, NOTE_ISSUE_LABEL,
+    MEDIA_ISSUE_CODES, MEDIA_ISSUE_LABEL, OUTPUT_SECTIONS,
+    ageDays, createdAgeDays, backlinkCountFor, headingSetFor, spawnedCount, hasOutputContent,
+    sectionStats,
+    lintNote, lintMedia,
+} = await dc.require("Toolkit/Datacore/LintRules.js");
 const { setField, fmtDate, daysSince } = V;
 
 // ───────────────────────────────────────────────────────────────────
 // Notes / promotion
 // ───────────────────────────────────────────────────────────────────
-const STATUSES = ["Stub", "Draft", "Solid", "Reference"];
-const STATUS_COLOR = { Stub: "var(--color-orange)", Draft: "var(--color-yellow)", Solid: "var(--color-blue)", Reference: "var(--color-green)" };
-const STUB_AGE_DAYS = 30;
-const MIN_BACKLINKS_REFERENCE = 3;
+const STATUSES = ["Stub", "Draft", "Mature", "Evergreen"];
+const STATUS_COLOR = { Stub: "var(--color-orange)", Draft: "var(--color-yellow)", Mature: "var(--color-blue)", Evergreen: "var(--color-green)" };
 
-const DOMAINS = ["Knowledge", "Engineering", "Process", "Idea", "Basic"];
 const DOMAIN_COLOR = {
-    Knowledge:   "var(--color-blue)",
-    Engineering: "var(--color-purple)",
-    Process:     "var(--color-cyan)",
-    Idea:        "var(--color-orange)",
-    Basic:       "var(--text-muted)"
+    Knowledge: "var(--color-blue)",
+    Process:   "var(--color-cyan)",
+    Idea:      "var(--color-orange)",
+    Reference: "var(--color-green)"
 };
 const DOMAIN_DESC = {
-    Knowledge:   "Descriptive — how X works / what X is. True regardless of context.",
-    Engineering: "Decisive — what I decided for a thing I'm building, and why.",
-    Process:     "Imperative — repeatable steps I take when X happens.",
-    Idea:        "Speculative — wouldn't it be cool if…",
-    Basic:       "Free-form — game notes, scratch thoughts, anything that doesn't need a schema."
-};
-const DOMAIN_SCHEMAS = {
-    Knowledge:   ["Summary", "Why it matters", "Example", "References"],
-    Engineering: ["Context", "Approach", "Consequences", "References"],
-    Process:     ["When to use", "Steps", "Watch out for", "References"],
-    Idea:        ["Pitch", "Why", "Open questions"],
-    Basic:       ["Notes"]
-};
-const DEFAULT_SCHEMA = ["Summary", "References"];
-
-const NOTE_ISSUE_CODES = ["no-domain", "no-topic", "missing-sections", "orphan", "needs-backlinks", "rotting"];
-const NOTE_ISSUE_LABEL = {
-    "no-domain":        "no domain",
-    "no-topic":         "no topic",
-    "missing-sections": "missing sections",
-    "orphan":           "orphan",
-    "needs-backlinks":  "needs backlinks",
-    "rotting":          "rotting"
+    Knowledge: "Descriptive — how X works / what X is. True regardless of context.",
+    Process:   "Imperative — repeatable steps I take when X happens.",
+    Idea:      "Speculative — wouldn't it be cool if…",
+    Reference: "Personal lookup material — cheatsheets, configs, game notes, anything I return to."
 };
 const NOTE_ISSUE_EMOJI = {
-    "no-domain":        "🏷",
     "no-topic":         "🧭",
     "missing-sections": "📑",
     "orphan":           "🔗",
@@ -100,35 +78,18 @@ const MEDIA_STATUS_COLOR = {
     Done:    "var(--color-green)",
     Dropped: "var(--text-muted)"
 };
-const STALE_BACKLOG_DAYS = 180;
-
-const MEDIA_ISSUE_CODES = ["no-topic", "no-output", "no-source", "stale-backlog"];
-const MEDIA_ISSUE_LABEL = {
-    "no-topic":      "no topic",
-    "no-output":     "no output",
-    "no-source":     "no source",
-    "stale-backlog": "stale backlog"
-};
 const MEDIA_ISSUE_EMOJI = {
     "no-topic":      "🏷️",
     "no-output":     "📭",
     "no-source":     "🔗",
     "stale-backlog": "🍂"
 };
-const OUTPUT_SECTIONS = ["takeaways", "review", "quotes"];
 
 // ───────────────────────────────────────────────────────────────────
-// Shared helpers
+// Shared helpers (Cogito-specific)
 // ───────────────────────────────────────────────────────────────────
-function schemaFor(domain) { return DOMAIN_SCHEMAS[domain] ?? DEFAULT_SCHEMA; }
 function templateBodyFor(domain) {
     return "\n" + schemaFor(domain).map(s => `## ${s}\n\n`).join("");
-}
-
-function ageDays(page) {
-    const ms = page.$mtime?.toMillis?.() ?? 0;
-    if (!ms) return 0;
-    return Math.floor((Date.now() - ms) / 86400000);
 }
 
 function parseDPrefixed(v) {
@@ -140,141 +101,23 @@ function parseDPrefixed(v) {
 
 
 
-function createdAgeDays(n) {
-    const c = n.value("created");
-    if (c) {
-        const t = Date.parse(String(c).replace(/^d_/, ""));
-        if (Number.isFinite(t)) return Math.floor((Date.now() - t) / 86400000);
-    }
-    return ageDays(n);
-}
+// sectionStats imported from LintRules.js
 
-function backlinkCountFor(path) {
-    try {
-        const file = dc.app.vault.getAbstractFileByPath(path);
-        if (!file) return 0;
-        const bl = dc.app.metadataCache.getBacklinksForFile?.(file);
-        if (!bl) return 0;
-        if (bl.data?.size != null) return bl.data.size;
-        return Object.keys(bl.data ?? {}).length;
-    } catch (e) { return 0; }
-}
-
-function headingSetFor(path) {
-    try {
-        const file = dc.app.vault.getAbstractFileByPath(path);
-        const cache = file && dc.app.metadataCache.getFileCache(file);
-        const hs = cache?.headings ?? [];
-        return new Set(hs.map(h => (h.heading || "").trim().toLowerCase()));
-    } catch (e) { return new Set(); }
-}
-
-function sectionStats(text) {
-    const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
-    const result = { __total__: body.replace(/\s+/g, "").length };
-    const lines = body.split(/\r?\n/);
-    let current = null;
-    let buf = [];
-    const flush = () => {
-        if (current != null) result[current] = (result[current] || 0) + buf.join("\n").replace(/\s+/g, "").length;
-        buf = [];
-    };
-    for (const line of lines) {
-        const h = line.match(/^#{1,6}\s+(.+?)\s*$/);
-        if (h) { flush(); current = h[1].trim().toLowerCase(); }
-        else if (current != null) { buf.push(line); }
-    }
-    flush();
-    return result;
-}
-
-function spawnedCount(m) {
-    const v = m.value("notes");
-    if (!v) return 0;
-    if (Array.isArray(v)) return v.length;
-    return 1;
-}
-
-function hasOutputContent(stats) {
-    if (!stats) return false;
-    return OUTPUT_SECTIONS.some(s => (stats[s] || 0) > 0);
-}
-
-// setField imported from Vault.md
+// setField imported from Vault.js
 
 // ───────────────────────────────────────────────────────────────────
-// Lint
+// Promotion helpers
 // ───────────────────────────────────────────────────────────────────
-function lintNote(n, bodyStats) {
-    const status   = n.value("status") ?? "Stub";
-    const domain   = n.value("domain") ?? "";
-    const topic    = n.value("topic") ?? "";
-    const required = domain === "Basic" ? [] : schemaFor(domain);
-    const stats    = bodyStats?.get(n.$path) ?? null;
-    const headings = headingSetFor(n.$path);
-    const missing = required.filter(s => {
-        const key = s.toLowerCase();
-        if (!headings.has(key)) return true;
-        if (stats && (stats[key] || 0) === 0) return true;
-        return false;
-    });
-    const bodyEmpty = stats != null && (stats.__total__ || 0) === 0;
-    const isEmpty = domain === "Basic" && bodyEmpty;
-    const backlinks = backlinkCountFor(n.$path);
-    const age = createdAgeDays(n);
-    const rotting = status === "Stub" && age >= STUB_AGE_DAYS;
-
-    const issues = [];
-    const codes = new Set();
-    if (!domain)                                                     { issues.push("no domain");          codes.add("no-domain"); }
-    if (!topic)                                                      { issues.push("no topic");           codes.add("no-topic"); }
-    if (missing.length > 0)                                          { issues.push(`missing: ${missing.join(", ")}`); codes.add("missing-sections"); }
-    if (isEmpty)                                                     { issues.push("empty");              codes.add("missing-sections"); }
-    if (backlinks === 0)                                             { issues.push("orphan");             codes.add("orphan"); }
-    if (status === "Reference" && backlinks < MIN_BACKLINKS_REFERENCE) { issues.push(`needs ≥${MIN_BACKLINKS_REFERENCE} backlinks`); codes.add("needs-backlinks"); }
-    if (rotting)                                                     { issues.push(`stub ${age}d`);       codes.add("rotting"); }
-
-    return { status, domain, topic, missing, isEmpty, bodyEmpty, backlinks, age, rotting, issues, codes };
-}
-
-function lintMedia(m, bodyStats) {
-    const status   = m.value("status") ?? "Backlog";
-    const source   = m.value("source");
-    const topic    = m.value("topic");
-    const spawned  = spawnedCount(m);
-    const stats    = bodyStats?.get(m.$path);
-    const hasOutput = hasOutputContent(stats);
-
-    const issues = [];
-    const codes = new Set();
-    const noteAge    = ageDays(m);
-
-    if (!topic || String(topic).trim() === "") {
-        issues.push("no topic"); codes.add("no-topic");
-    }
-    if (status === "Done" && spawned === 0 && !hasOutput) {
-        issues.push("no output"); codes.add("no-output");
-    }
-    if (status !== "Dropped" && !source) {
-        issues.push("no source"); codes.add("no-source");
-    }
-    if (status === "Backlog" && noteAge >= STALE_BACKLOG_DAYS) {
-        issues.push(`stale backlog ${noteAge}d`); codes.add("stale-backlog");
-    }
-
-    return { status, source, spawned, hasOutput, issues, codes };
-}
-
 function nextStatus(status) {
-    return { Stub: "Draft", Draft: "Solid", Solid: "Reference", Reference: null }[status] ?? null;
+    return { Stub: "Draft", Draft: "Mature", Mature: "Evergreen", Evergreen: null }[status] ?? null;
 }
 
 function canPromote(lint) {
     const next = nextStatus(lint.status);
     if (!next) return { next: null, blocked: true, reason: "Top maturity" };
     if (next === "Draft"     && lint.bodyEmpty) return { next, blocked: true, reason: "Add some content first" };
-    if (next === "Solid"     && (lint.bodyEmpty || lint.backlinks < 1 || lint.missing.length > 0 || lint.isEmpty)) return { next, blocked: true, reason: "Needs content, ≥1 backlink, all sections filled" };
-    if (next === "Reference" && (lint.backlinks < MIN_BACKLINKS_REFERENCE || lint.missing.length > 0 || lint.isEmpty)) return { next, blocked: true, reason: `Needs ≥${MIN_BACKLINKS_REFERENCE} backlinks + content` };
+    if (next === "Mature"    && (lint.bodyEmpty || lint.backlinks < 1 || lint.missing.length > 0 || lint.isEmpty)) return { next, blocked: true, reason: "Needs content, ≥1 backlink, all sections filled" };
+    if (next === "Evergreen" && (lint.backlinks < MIN_BACKLINKS_EVERGREEN || lint.missing.length > 0 || lint.isEmpty)) return { next, blocked: true, reason: `Needs ≥${MIN_BACKLINKS_EVERGREEN} backlinks + content` };
     return { next, blocked: false, reason: "" };
 }
 
@@ -283,22 +126,9 @@ function canPromote(lint) {
 // ───────────────────────────────────────────────────────────────────
 // NewForm imported from UI.md
 
-function StatusPill({ status }) {
-    return <span style={{ padding: "1px 8px", borderRadius: "10px", background: STATUS_COLOR[status] ?? "var(--background-modifier-border)", color: "white", fontSize: "0.75em" }}>{status}</span>;
-}
-
 function DomainPill({ domain }) {
     if (!domain) return <span style={{ opacity: 0.5 }}>—</span>;
-    return <span style={{ padding: "1px 8px", borderRadius: "10px", background: DOMAIN_COLOR[domain] ?? "var(--background-modifier-border)", color: "white", fontSize: "0.75em" }}>{domain}</span>;
-}
-
-function TypePill({ type }) {
-    if (!type) return <span style={{ opacity: 0.5 }}>—</span>;
-    return <span style={{ padding: "1px 8px", borderRadius: "10px", background: MEDIA_TYPE_COLOR[type] ?? "var(--background-modifier-border)", color: "white", fontSize: "0.75em" }}>{type}</span>;
-}
-
-function MediaStatusPill({ status }) {
-    return <span style={{ padding: "1px 8px", borderRadius: "10px", background: MEDIA_STATUS_COLOR[status] ?? "var(--background-modifier-border)", color: "white", fontSize: "0.75em" }}>{status}</span>;
+    return <Pill label={domain} color={DOMAIN_COLOR[domain] ?? "var(--background-modifier-border)"} />;
 }
 
 function TopicCell({ note, topic, topics }) {
@@ -437,7 +267,7 @@ function NewDrawingButton({ topics }) {
             });
             new window.Notice(`Created drawing`);
             setTopic("");
-            await dc.app.workspace.openLinkText(path, "");
+            await dc.app.workspace.openLinkText(path, "", "tab");
         } catch (e) { new window.Notice(`Failed: ${e.message}`); }
     };
     return (
@@ -460,20 +290,16 @@ return function View() {
     const media    = dc.useQuery('@page and #system/cogito/media and path("Systems/Cogito/Media")');
 
     const [tab, setTab] = dc.useState("Notes");
+    const [inboxSearch, setInboxSearch] = dc.useState("");
 
     // ── Notes filters ──
     const [statusFilter, setStatusFilter] = dc.useState("All");
     const [domainFilter, setDomainFilter] = dc.useState("All");
     const [topicFilter, setTopicFilter] = dc.useState("All");
     const [issueFilter, setIssueFilter] = dc.useState("All");
-    const [searchInput, setSearchInput] = dc.useState("");
-    const [search, setSearch] = dc.useState("");
-    dc.useEffect(() => {
-        const t = setTimeout(() => setSearch(searchInput), 200);
-        return () => clearTimeout(t);
-    }, [searchInput]);
+    const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
     const resetFilters = () => {
-        setStatusFilter("All"); setDomainFilter("All"); setTopicFilter("All"); setIssueFilter("All"); setSearchInput(""); setSearch("");
+        setStatusFilter("All"); setDomainFilter("All"); setTopicFilter("All"); setIssueFilter("All"); setSearchInput("");
     };
     const filtersActive = statusFilter !== "All" || domainFilter !== "All" || topicFilter !== "All" || issueFilter !== "All" || search !== "";
 
@@ -482,14 +308,9 @@ return function View() {
     const [mStatusFilter, setMStatusFilter] = dc.useState("All");
     const [mTopicFilter, setMTopicFilter]   = dc.useState("All");
     const [mIssueFilter, setMIssueFilter]   = dc.useState("All");
-    const [mSearchInput, setMSearchInput]   = dc.useState("");
-    const [mSearch, setMSearch]             = dc.useState("");
-    dc.useEffect(() => {
-        const t = setTimeout(() => setMSearch(mSearchInput), 200);
-        return () => clearTimeout(t);
-    }, [mSearchInput]);
+    const [mSearchInput, setMSearchInput, mSearch] = useDebouncedSearch(200);
     const resetMFilters = () => {
-        setMTypeFilter("All"); setMStatusFilter("All"); setMTopicFilter("All"); setMIssueFilter("All"); setMSearchInput(""); setMSearch("");
+        setMTypeFilter("All"); setMStatusFilter("All"); setMTopicFilter("All"); setMIssueFilter("All"); setMSearchInput("");
     };
     const mFiltersActive = mTypeFilter !== "All" || mStatusFilter !== "All" || mTopicFilter !== "All" || mIssueFilter !== "All" || mSearch !== "";
 
@@ -633,8 +454,8 @@ return function View() {
         total: notes.length,
         stub: notes.filter(n => (lints.get(n.$path)?.status ?? "Stub") === "Stub").length,
         draft: notes.filter(n => lints.get(n.$path)?.status === "Draft").length,
-        solid: notes.filter(n => lints.get(n.$path)?.status === "Solid").length,
-        ref: notes.filter(n => lints.get(n.$path)?.status === "Reference").length,
+        solid: notes.filter(n => lints.get(n.$path)?.status === "Mature").length,
+        ref: notes.filter(n => lints.get(n.$path)?.status === "Evergreen").length,
     };
 
     const mCounts = {
@@ -692,8 +513,8 @@ return function View() {
                 <KpiCard label="Notes"     value={counts.total} onClick={() => { resetFilters(); setTab("Notes"); }} active={tab === "Notes" && !filtersActive} />
                 <KpiCard label="Stub"      value={counts.stub}  color={STATUS_COLOR.Stub}      onClick={() => focusStatus("Stub")}      active={tab === "Notes" && statusFilter === "Stub"} />
                 <KpiCard label="Draft"     value={counts.draft} color={STATUS_COLOR.Draft}     onClick={() => focusStatus("Draft")}     active={tab === "Notes" && statusFilter === "Draft"} />
-                <KpiCard label="Solid"     value={counts.solid} color={STATUS_COLOR.Solid}     onClick={() => focusStatus("Solid")}     active={tab === "Notes" && statusFilter === "Solid"} />
-                <KpiCard label="Reference" value={counts.ref}   color={STATUS_COLOR.Reference} onClick={() => focusStatus("Reference")} active={tab === "Notes" && statusFilter === "Reference"} />
+                <KpiCard label="Mature"    value={counts.solid} color={STATUS_COLOR.Mature}    onClick={() => focusStatus("Mature")}    active={tab === "Notes" && statusFilter === "Mature"} />
+                <KpiCard label="Evergreen" value={counts.ref}   color={STATUS_COLOR.Evergreen} onClick={() => focusStatus("Evergreen")} active={tab === "Notes" && statusFilter === "Evergreen"} />
             </div>
 
             {/* KPI strip — Media */}
@@ -778,40 +599,55 @@ return function View() {
                         Inbox accepts anything. Skim weekly. Promote what matters; delete the rest. No guilt.
                     </div>
                     {inbox.length > 0 ? (
-                        <dc.Table paging={10} rows={[...inbox].sort((a,b) => a.$name.localeCompare(b.$name))}
-                            columns={[
-                                { id: "Capture", value: i => i.$link },
-                                { id: "Age", value: i => ageDays(i), render: (v) => `${v}d` },
-                                {
-                                    id: "Actions", value: () => "",
-                                    render: (_, i) => (
-                                        <div style={{ display: "flex", gap: "6px" }}>
-                                            <button onClick={async () => {
-                                                try {
-                                                    const file = dc.app.vault.getAbstractFileByPath(i.$path);
-                                                    if (!file) return;
-                                                    await dc.app.fileManager.processFrontMatter(file, fm => {
-                                                        fm.tags = ["system/cogito/note"]; fm.status = "Stub";
-                                                        if (!fm.domain) fm.domain = "Basic";
-                                                        if (!fm.topic) fm.topic = "";
-                                                    });
-                                                    await dc.app.fileManager.renameFile(file, `Systems/Cogito/Notes/${i.$name}.md`);
-                                                    new window.Notice("Promoted to Notes");
-                                                } catch (e) { console.error(e); new window.Notice(`Promote failed: ${e.message}`); }
-                                            }} style={{ fontSize: "0.78em", padding: "2px 8px", cursor: "pointer" }}>→ Notes</button>
-                                            <button onClick={async () => {
-                                                if (!window.confirm(`Delete "${i.$name}"? This cannot be undone.`)) return;
-                                                try {
-                                                    const file = dc.app.vault.getAbstractFileByPath(i.$path);
-                                                    if (!file) return;
-                                                    await dc.app.vault.trash(file, true);
-                                                    new window.Notice("Deleted from Inbox");
-                                                } catch (e) { console.error(e); new window.Notice(`Delete failed: ${e.message}`); }
-                                            }} style={{ fontSize: "0.78em", padding: "2px 8px", cursor: "pointer", color: "var(--text-error)" }}>🗑 Delete</button>
-                                        </div>
-                                    )
-                                }
-                            ]} />
+                        <>
+                            <input
+                                type="text"
+                                placeholder="Search inbox…"
+                                value={inboxSearch}
+                                onChange={e => setInboxSearch(e.target.value)}
+                                style={{ width: "100%", marginBottom: "8px", padding: "4px 8px", boxSizing: "border-box" }}
+                            />
+                            <dc.Table paging={10} rows={[...inbox]
+                                .filter(i => !inboxSearch || i.$name.toLowerCase().includes(inboxSearch.toLowerCase()))
+                                .sort((a, b) => ageDays(b) - ageDays(a))}
+                                columns={[
+                                    { id: "Capture", value: i => i.$link },
+                                    { id: "Age", value: i => ageDays(i), render: (v) => (
+                                        <span style={{ color: v >= INBOX_STALE_DAYS ? "var(--color-red)" : v >= Math.floor(INBOX_STALE_DAYS / 2) ? "var(--color-yellow)" : undefined }}>
+                                            {v}d{v >= INBOX_STALE_DAYS ? " ⚠" : ""}
+                                        </span>
+                                    )},
+                                    {
+                                        id: "Actions", value: () => "",
+                                        render: (_, i) => (
+                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                <button onClick={async () => {
+                                                    try {
+                                                        const file = dc.app.vault.getAbstractFileByPath(i.$path);
+                                                        if (!file) return;
+                                                        await dc.app.fileManager.processFrontMatter(file, fm => {
+                                                            fm.tags = ["system/cogito/note"]; fm.status = "Stub";
+                                                            if (!fm.domain) fm.domain = "Reference";
+                                                            if (!fm.topic) fm.topic = "";
+                                                        });
+                                                        await dc.app.fileManager.renameFile(file, `Systems/Cogito/Notes/${i.$name}.md`);
+                                                        new window.Notice("Promoted to Notes");
+                                                    } catch (e) { console.error(e); new window.Notice(`Promote failed: ${e.message}`); }
+                                                }} style={{ fontSize: "0.78em", padding: "2px 8px", cursor: "pointer" }}>→ Notes</button>
+                                                <button onClick={async () => {
+                                                    if (!window.confirm(`Delete "${i.$name}"? This cannot be undone.`)) return;
+                                                    try {
+                                                        const file = dc.app.vault.getAbstractFileByPath(i.$path);
+                                                        if (!file) return;
+                                                        await dc.app.vault.trash(file, true);
+                                                        new window.Notice("Deleted from Inbox");
+                                                    } catch (e) { console.error(e); new window.Notice(`Delete failed: ${e.message}`); }
+                                                }} style={{ fontSize: "0.78em", padding: "2px 8px", cursor: "pointer", color: "var(--text-error)" }}>🗑 Delete</button>
+                                            </div>
+                                        )
+                                    }
+                                ]} />
+                        </>
                     ) : null}
                 </div>
             </details>
@@ -868,7 +704,7 @@ return function View() {
                         <summary style={{ cursor: "pointer" }}>What does each issue mean? (Lint cheat-sheet)</summary>
                         <div style={{ padding: "8px 12px", background: "var(--background-secondary)", borderRadius: "5px", marginTop: "6px" }}>
                             <div style={{ marginBottom: "6px" }}>
-                                <strong>no domain</strong> — note isn't tagged Knowledge / Engineering / Process / Idea.
+                                <strong>no domain</strong> — note isn't tagged Knowledge / Process / Idea / Reference.
                                 <div style={{ marginLeft: "12px", opacity: 0.7 }}>Fix: pick a domain from the dropdown in the Domain column.</div>
                             </div>
                             <div style={{ marginBottom: "6px" }}>
@@ -884,8 +720,8 @@ return function View() {
                                 <div style={{ marginLeft: "12px", opacity: 0.7 }}>Fix: link to it from a related note, a MOC, or a project. If nothing wants to point at it, demote or delete.</div>
                             </div>
                             <div style={{ marginBottom: "6px" }}>
-                                <strong>needs ≥{MIN_BACKLINKS_REFERENCE} backlinks</strong> — note is marked <em>Reference</em> but isn't pulling its weight.
-                                <div style={{ marginLeft: "12px", opacity: 0.7 }}>Fix: link to it from more notes, or demote its status back to <em>Solid</em>.</div>
+                                <strong>needs ≥{MIN_BACKLINKS_EVERGREEN} backlinks</strong> — note is marked <em>Evergreen</em> but isn't pulling its weight.
+                                <div style={{ marginLeft: "12px", opacity: 0.7 }}>Fix: link to it from more notes, or demote its status back to <em>Mature</em>.</div>
                             </div>
                             <div style={{ marginBottom: "6px" }}>
                                 <strong>stub Nd</strong> — note has been a Stub for ≥{STUB_AGE_DAYS} days (measured from <code>created</code>, not last-edit). It's rotting.
@@ -960,7 +796,8 @@ return function View() {
                                         → {p.next}
                                     </button>;
                                 }
-                            }
+                            },
+                            deleteColumn("note")
                         ]} />
                 </div>
             ) : null}
@@ -1024,7 +861,7 @@ return function View() {
                         folder='Systems/Cogito/Media'
                         tag={["system/cogito/media"]}
                         defaults={{ status: "Backlog" }}
-                        body={() => "\n## Takeaways\n\n## Quotes\n\n## Review\n"}
+                        body={() => "\n## Summary\n\n## Key Takeaways\n\n## Notable Details\n\n## Related Notes\n"}
                         fields={[
                             { name: "name",   label: "Title", width: "260px" },
                             { name: "type",   label: "Type", type: "select", options: MEDIA_TYPES, default: "Book" },
@@ -1043,8 +880,8 @@ return function View() {
                                 <div style={{ marginLeft: "12px", opacity: 0.7 }}>Fix: type a topic inline in the Topic column.</div>
                             </div>
                             <div style={{ marginBottom: "6px" }}>
-                                <strong>no output</strong> — Done but no spawned Knowledge notes AND no content under <code>## Takeaways / Review / Quotes</code>.
-                                <div style={{ marginLeft: "12px", opacity: 0.7 }}>Honest signal: did this teach you anything?</div>
+                                <strong>no output</strong> — Done but no spawned Knowledge notes AND <code>## Summary</code> or <code>## Key Takeaways</code> is missing or empty.
+                                <div style={{ marginLeft: "12px", opacity: 0.7 }}>Honest signal: did this teach you anything? Write at least a Summary and Key Takeaways.</div>
                             </div>
                             <div style={{ marginBottom: "6px" }}>
                                 <strong>no source</strong> — no <code>source:</code> URL. Required at every stage except Dropped.
@@ -1110,7 +947,8 @@ return function View() {
                             {
                                 id: "Issues", value: m => (mLints.get(m.$path)?.issues ?? []).length,
                                 render: (_, m) => <IssueChips codes={mLints.get(m.$path)?.codes} labels={MEDIA_ISSUE_LABEL} emojis={MEDIA_ISSUE_EMOJI} onPick={focusMIssue} />
-                            }
+                            },
+                            deleteColumn("media")
                         ]} />
                 </div>
             ) : null}

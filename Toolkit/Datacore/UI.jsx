@@ -1,4 +1,4 @@
-﻿// Barrel module — re-exports everything from ui/*.
+// Barrel module — re-exports everything from ui/*.
 // Existing dashboards keep working with: const UI = await dc.require("Toolkit/Datacore/UI.jsx");
 //
 // New code can require submodules directly for slightly faster cold load:

@@ -1,4 +1,4 @@
-﻿const path = require('path');
+const path = require('path');
 const fs = require('fs');
 
 let templater = null;
@@ -17,6 +17,15 @@ function extractProblemId(url) {
 function cleanUrl(url) {
     const titleSlug = extractProblemId(url);
     return `https://leetcode.com/problems/${titleSlug}/`;
+}
+
+function extractStudyPlan(url) {
+    try {
+        const u = new URL(url);
+        return u.searchParams.get("envId") || null;
+    } catch {
+        return null;
+    }
 }
 
 async function scrapLeetcodeProblem(templaterInstance, url)
@@ -61,5 +70,6 @@ async function scrapLeetcodeProblem(templaterInstance, url)
 
 module.exports = {
     cleanUrl: (url) => cleanUrl(url),
+    extractStudyPlan: (url) => extractStudyPlan(url),
     scrapProblem: async (tp, url) => await scrapLeetcodeProblem(tp, url),
 };

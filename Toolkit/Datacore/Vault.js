@@ -1,4 +1,4 @@
-﻿// Shared low-level helpers for Datacore dashboards.
+// Shared low-level helpers for Datacore dashboards.
 // Loaded with: const V = await dc.require("Toolkit/Datacore/Vault.js");
 //
 // All functions here are pure JS (no React). For UI components see UI.jsx.
@@ -74,9 +74,9 @@ async function confirmTrash(fileOrItem, msg) {
     return true;
 }
 
-/** Strip filename-illegal characters. */
+/** Strip filename-illegal characters (covers Windows, macOS, Obsidian wiki-link chars). */
 function safeName(s) {
-    return String(s ?? "").replace(/[<>:"/\\|?*]/g, "-").trim();
+    return String(s ?? "").replace(/[<>:"/\\|?*#\[\]^]/g, "-").trim();
 }
 
 /**
@@ -204,9 +204,9 @@ function bodyTemplate(headings) {
     return "\n" + headings.map(h => `## ${h}\n`).join("\n");
 }
 
-/** Open a note by vault path (no-op if path is falsy). */
+/** Open a note by vault path in a new tab (no-op if path is falsy). */
 function openNote(path) {
-    if (path) dc.app.workspace.openLinkText(path, "");
+    if (path) dc.app.workspace.openLinkText(path, "", "tab");
 }
 
 // =====================================================================
@@ -227,6 +227,71 @@ async function runTemplater(templatePath, folderPath) {
     return true;
 }
 
+// =====================================================================
+// Note creation (shared by Oraculum tools and any dashboard that needs
+// to programmatically create notes with YAML frontmatter)
+// =====================================================================
+
+/**
+ * Get a vault file by path. Returns null if not found.
+ * @param {string} path
+ * @returns {import("obsidian").TFile|null}
+ */
+function getFile(path) {
+    return dc.app.vault.getAbstractFileByPath(path) ?? null;
+}
+
+/**
+ * Find a markdown file by basename, path suffix, or exact path.
+ * @param {string}  name          The note basename (no extension) or full path.
+ * @param {string}  [folderPrefix] If provided, only search within this folder.
+ * @returns {import("obsidian").TFile|null}
+ */
+function findByName(name, folderPrefix) {
+    const files = dc.app.vault.getMarkdownFiles();
+    return files.find(f =>
+        (f.basename === name ||
+         f.path     === name ||
+         f.path.endsWith("/" + name + ".md")) &&
+        (!folderPrefix || f.path.startsWith(folderPrefix))
+    ) ?? null;
+}
+
+/**
+ * Create (or overwrite) a note with YAML frontmatter + an optional body.
+ *
+ * @param {string}                  folder       Vault folder path (created if absent).
+ * @param {string}                  fileName     Basename without `.md`.
+ * @param {Record<string,any>}      frontmatter  Key/value pairs written as YAML.
+ * @param {string}                  [body]       Raw markdown appended after the front matter.
+ * @returns {Promise<{path:string, created:boolean}>}
+ */
+async function createNote(folder, fileName, frontmatter, body = "") {
+    await ensureFolder(folder);
+
+    // Find a unique path — Windows-style (2), (3), ... if the name is taken
+    let path = `${folder}/${fileName}.md`;
+    let n = 2;
+    while (dc.app.vault.getAbstractFileByPath(path)) {
+        path = `${folder}/${fileName} (${n}).md`;
+        n++;
+    }
+
+    let fm = "---\n";
+    for (const [k, v] of Object.entries(frontmatter)) {
+        if (Array.isArray(v)) {
+            fm += `${k}:\n${v.map(i => `  - ${i}`).join("\n")}\n`;
+        } else if (v !== undefined && v !== null) {
+            fm += `${k}: ${v}\n`;
+        }
+    }
+    fm += "---\n";
+
+    const content = fm + (body ? `\n${body}` : "");
+    await dc.app.vault.create(path, content);
+    return { path, created: true };
+}
+
 return {
     setField, setFields,
     notify,
@@ -237,4 +302,5 @@ return {
     q, sortByDateDesc, sortBy, groupByStatus, countByStatus,
     bodyTemplate, openNote,
     runTemplater,
+    getFile, findByName, createNote,
 };

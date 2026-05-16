@@ -1,15 +1,14 @@
 ---
+dashboard: true
 tags:
   - system/growth
 ---
 
 # Growth
-
-> Engineering self-management. Skills tree, brag doc, reviews, ADRs, postmortems.
-
 ```datacorejsx
 const V = await dc.require("Toolkit/Datacore/Vault.js");
-const { NewForm, StatusSelect, TabStrip, useDebouncedSearch } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { NewForm, StatusSelect, TabStrip, useDebouncedSearch, useBodyMap, computeLintMap, useLintState, LintPanel, lintColumn, deleteColumn } = await dc.require("Toolkit/Datacore/UI.jsx");
+const { lintBrag, lintAdr, lintReview, lintPostmortem, GROWTH_ISSUE_CODES, GROWTH_ISSUE_LABELS } = await dc.require("Toolkit/Datacore/LintRules.js");
 const { fmtDate } = V;
 
 const SKILL_LEVELS = ["Novice", "Advanced Beginner", "Competent", "Proficient", "Expert"];
@@ -23,6 +22,20 @@ return function View() {
     const pms     = dc.useQuery(V.q("system/growth/postmortem", "Systems/Growth"));
     const [tab, setTab] = dc.useState("Skills");
     const [searchInput, setSearchInput, search] = useDebouncedSearch(200);
+
+    // Load body content for all growth types that have body sections to lint
+    const allItems = [...brags, ...adrs, ...reviews, ...pms];
+    const bodyMap = useBodyMap(allItems);
+
+    const bragLintIssues   = dc.useMemo(() => computeLintMap(brags,   p => lintBrag(p,       bodyMap.get(p.$path) ?? "")), [brags,   bodyMap]);
+    const adrLintIssues    = dc.useMemo(() => computeLintMap(adrs,    p => lintAdr(p,        bodyMap.get(p.$path) ?? "")), [adrs,    bodyMap]);
+    const reviewLintIssues = dc.useMemo(() => computeLintMap(reviews, p => lintReview(p,     bodyMap.get(p.$path) ?? "")), [reviews, bodyMap]);
+    const pmLintIssues     = dc.useMemo(() => computeLintMap(pms,     p => lintPostmortem(p, bodyMap.get(p.$path) ?? "")), [pms,     bodyMap]);
+
+    const { issueFilter: bragFilter, setIssueFilter: setBragFilter, issueCounts: bragCounts, totalIssues: bragTotalIssues, itemsWithLint: bragsWithLint }       = useLintState(brags,   bragLintIssues);
+    const { issueFilter: adrFilter,  setIssueFilter: setAdrFilter,  issueCounts: adrCounts,  totalIssues: adrTotalIssues,  itemsWithLint: adrsWithLint }         = useLintState(adrs,    adrLintIssues);
+    const { issueFilter: rvwFilter,  setIssueFilter: setRvwFilter,  issueCounts: rvwCounts,  totalIssues: rvwTotalIssues,  itemsWithLint: reviewsWithLint }       = useLintState(reviews, reviewLintIssues);
+    const { issueFilter: pmFilter,   setIssueFilter: setPmFilter,   issueCounts: pmCounts,   totalIssues: pmTotalIssues,   itemsWithLint: pmsWithLint }           = useLintState(pms,     pmLintIssues);
 
     const SearchBox = () => (
         <input type="text" placeholder="🔍 search…" value={searchInput}
@@ -69,11 +82,19 @@ return function View() {
                             { name: "date", type: "date", default: V.today(), width: "150px" }
                         ]}
                     />
+                    <LintPanel codes={["incomplete-brag"]} labels={GROWTH_ISSUE_LABELS}
+                        issueFilter={bragFilter} setIssueFilter={setBragFilter} issueCounts={bragCounts}
+                        totalIssues={bragTotalIssues} itemsWithLint={bragsWithLint} />
                     <SearchBox />
-                    <dc.Table paging={20} rows={V.sortByDateDesc(brags).filter(b => !search || b.$name.toLowerCase().includes(search))}
+                    <dc.Table paging={20} rows={V.sortByDateDesc(brags).filter(b => {
+                        if (bragFilter !== "All" && !bragLintIssues.get(b.$path)?.some(i => i.code === bragFilter)) return false;
+                        return !search || b.$name.toLowerCase().includes(search);
+                    })}
                         columns={[
                             { id: "Win", value: b => b.$link },
-                            { id: "Date", value: b => fmtDate(b.value("date")) }
+                            { id: "Date", value: b => fmtDate(b.value("date")) },
+                            lintColumn(bragLintIssues, bragFilter, setBragFilter),
+                            deleteColumn("win"),
                         ]} />
                 </div>
             ) : null}
@@ -84,9 +105,19 @@ return function View() {
                         body={() => V.bodyTemplate(["Went well", "Stuck on", "Struggled with", "Patterns", "Next"])}
                         fields={[{ name: "name", placeholder: "Review title (e.g. 2026-04 monthly)", width: "300px" }]}
                     />
+                    <LintPanel codes={["incomplete-review"]} labels={GROWTH_ISSUE_LABELS}
+                        issueFilter={rvwFilter} setIssueFilter={setRvwFilter} issueCounts={rvwCounts}
+                        totalIssues={rvwTotalIssues} itemsWithLint={reviewsWithLint} />
                     <SearchBox />
-                    <dc.Table paging={20} rows={reviews.filter(r => !search || r.$name.toLowerCase().includes(search))}
-                        columns={[{ id: "Review", value: r => r.$link }]} />
+                    <dc.Table paging={20} rows={reviews.filter(r => {
+                        if (rvwFilter !== "All" && !reviewLintIssues.get(r.$path)?.some(i => i.code === rvwFilter)) return false;
+                        return !search || r.$name.toLowerCase().includes(search);
+                    })}
+                        columns={[
+                            { id: "Review", value: r => r.$link },
+                            lintColumn(reviewLintIssues, rvwFilter, setRvwFilter),
+                            deleteColumn("review"),
+                        ]} />
                 </div>
             ) : null}
 
@@ -99,12 +130,20 @@ return function View() {
                             { name: "status", type: "select", options: ADR_STATUS, default: "Proposed" }
                         ]}
                     />
+                    <LintPanel codes={["incomplete-adr"]} labels={GROWTH_ISSUE_LABELS}
+                        issueFilter={adrFilter} setIssueFilter={setAdrFilter} issueCounts={adrCounts}
+                        totalIssues={adrTotalIssues} itemsWithLint={adrsWithLint} />
                     <SearchBox />
-                    <dc.Table paging={20} rows={adrs.filter(a => !search || a.$name.toLowerCase().includes(search))}
+                    <dc.Table paging={20} rows={adrs.filter(a => {
+                        if (adrFilter !== "All" && !adrLintIssues.get(a.$path)?.some(i => i.code === adrFilter)) return false;
+                        return !search || a.$name.toLowerCase().includes(search);
+                    })}
                         columns={[
                             { id: "ADR", value: a => a.$link },
                             { id: "Status", value: a => String(a.value("status") ?? ""),
-                              render: (_, a) => <StatusSelect item={a} field="status" options={ADR_STATUS} defaultValue="Proposed" /> }
+                              render: (_, a) => <StatusSelect item={a} field="status" options={ADR_STATUS} defaultValue="Proposed" /> },
+                            lintColumn(adrLintIssues, adrFilter, setAdrFilter),
+                            deleteColumn("ADR"),
                         ]} />
                 </div>
             ) : null}
@@ -118,11 +157,19 @@ return function View() {
                             { name: "date", type: "date", default: V.today(), width: "150px" }
                         ]}
                     />
+                    <LintPanel codes={["incomplete-postmortem"]} labels={GROWTH_ISSUE_LABELS}
+                        issueFilter={pmFilter} setIssueFilter={setPmFilter} issueCounts={pmCounts}
+                        totalIssues={pmTotalIssues} itemsWithLint={pmsWithLint} />
                     <SearchBox />
-                    <dc.Table paging={20} rows={V.sortByDateDesc(pms).filter(p => !search || p.$name.toLowerCase().includes(search))}
+                    <dc.Table paging={20} rows={V.sortByDateDesc(pms).filter(p => {
+                        if (pmFilter !== "All" && !pmLintIssues.get(p.$path)?.some(i => i.code === pmFilter)) return false;
+                        return !search || p.$name.toLowerCase().includes(search);
+                    })}
                         columns={[
                             { id: "Incident", value: p => p.$link },
-                            { id: "Date", value: p => fmtDate(p.value("date")) }
+                            { id: "Date", value: p => fmtDate(p.value("date")) },
+                            lintColumn(pmLintIssues, pmFilter, setPmFilter),
+                            deleteColumn("postmortem"),
                         ]} />
                 </div>
             ) : null}
