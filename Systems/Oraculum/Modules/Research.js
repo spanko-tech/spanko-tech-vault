@@ -12,7 +12,7 @@
 //   Search grounding → 1.5K/day
 // We rate-limit ourselves to one batch every ~12s and surface usage stats in the UI.
 
-const C  = await dc.require("Systems/Oraculum/Modules/Cache.js");
+const C  = await dc.require("Toolkit/Datacore/Cache.js");
 const G  = await dc.require("Systems/Oraculum/Modules/GeminiClient.js");
 const V  = await dc.require("Toolkit/Datacore/Vault.js");
 

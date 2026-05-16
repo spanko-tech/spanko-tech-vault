@@ -8,7 +8,7 @@ tags:
 ```datacorejsx
 const V  = await dc.require("Toolkit/Datacore/Vault.js");
 const W  = await dc.require("Toolkit/Datacore/Web.js");
-const C  = await dc.require("Systems/Oraculum/Modules/Cache.js");
+const C  = await dc.require("Toolkit/Datacore/Cache.js");
 const UI = await dc.require("Toolkit/Datacore/UI.jsx");
 const L  = await dc.require("Toolkit/Datacore/LintRules.js");
 const { EmptyState, SearchableSelect } = UI;

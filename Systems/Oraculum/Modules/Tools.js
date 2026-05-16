@@ -13,7 +13,7 @@ const R = await dc.require("Systems/Oraculum/Modules/Research.js");
 // Shared HTTP helpers (httpGet, fetchPageText).
 const W = await dc.require("Toolkit/Datacore/Web.js");
 // localStorage cache shared with Research.js.
-const C = await dc.require("Systems/Oraculum/Modules/Cache.js");
+const C = await dc.require("Toolkit/Datacore/Cache.js");
 // Vault helpers (safeName, ensureFolder, today, fmtDate, setField…).
 const V = await dc.require("Toolkit/Datacore/Vault.js");
 

@@ -12,6 +12,7 @@ const E  = await dc.require("Systems/Oraculum/Modules/Embeddings.js");
 const S  = await dc.require("Systems/Oraculum/Modules/Settings.js");
 const Sk = await dc.require("Systems/Oraculum/Modules/Skills.js");
 const R  = await dc.require("Systems/Oraculum/Modules/Research.js");
+const C  = await dc.require("Toolkit/Datacore/Cache.js");
 
 const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric"

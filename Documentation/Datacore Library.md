@@ -9,6 +9,7 @@ The goal: keep dashboards small and configurable so you can tweak them without r
 Toolkit/Datacore/
   Vault.js          Pure JS helpers (frontmatter, dates, queries, files)
   Web.js            HTTP helpers + page scraping (httpGet, httpJson, httpBinary, fetchPageText)
+  Cache.js          TTL-based localStorage cache shared by dashboards and Oraculum modules
   LintRules.js      All lint rule functions and thresholds - single source of truth
   Issues.js         Issue path/move logic shared between dashboard and Oraculum tools
   UI.jsx            Barrel re-exporting everything in ui/*
@@ -48,6 +49,33 @@ const W = await dc.require("Toolkit/Datacore/Web.js");
 | `httpJson(url, opts?)` | GET that parses JSON → `{ ok, data, status }`. Pass `opts.method`, `opts.headers`, `opts.body` for POST/GraphQL. |
 | `httpBinary(url, opts?)` | GET returning `{ ok, buffer: ArrayBuffer, status }`. Used for image downloads. |
 | `fetchPageText(url, limit?)` | Scrapes a URL and returns cleaned readable text (strips scripts, nav, etc.). Falls back to Jina Reader (`r.jina.ai`) if the direct fetch returns sparse content. `limit` defaults to 6000 chars. |
+
+## Cache.js - TTL cache
+
+TTL-based localStorage cache for transient API responses (news feeds, weather, research, transcripts). Import with:
+
+```js
+const C = await dc.require("Toolkit/Datacore/Cache.js");
+```
+
+| Function | Purpose |
+|---|---|
+| `C.get(key, ttl?)` | Returns cached data or `null` if missing/expired. `ttl` defaults to 7 days. |
+| `C.set(key, data)` | Writes data with the current timestamp. Auto-evicts oldest entries on quota errors. |
+| `C.remove(key)` | Removes a single entry. |
+| `C.clearAll(filter?)` | Clears all cache entries. Pass a string to only clear keys containing it. |
+| `C.stats()` | Returns `{ count, bytes }` — number of entries and approximate size. |
+
+**TTL constants** (`C.TTL.*`):
+
+| Constant | Value |
+|---|---|
+| `DEFAULT_MS` | 7 days |
+| `TRANSCRIPT_MS` | 30 days |
+| `RESEARCH_MS` | 30 days |
+| `METADATA_MS` | 7 days |
+
+All keys are namespaced under `oraculum:cache:` in localStorage — never written to the vault or synced across devices.
 
 ## LintRules.js - lint functions
 

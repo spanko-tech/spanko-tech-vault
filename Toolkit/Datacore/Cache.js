@@ -1,8 +1,7 @@
-// Systems/Oraculum/Modules/Cache.js
-// TTL-based localStorage cache shared by Tools.js (transcripts, social metadata)
-// and Research.js (Gemini 2.5 Flash grounded responses).
+// Toolkit/Datacore/Cache.js
+// TTL-based localStorage cache shared across all dashboards and Oraculum modules.
 //
-// Loaded with: const C = await dc.require("Systems/Oraculum/Modules/Cache.js");
+// Loaded with: const C = await dc.require("Toolkit/Datacore/Cache.js");
 //
 // Why localStorage and not the vault: cache entries can grow large and we
 // don't want them syncing across devices or polluting the vault. Persistent
@@ -40,7 +39,7 @@ function set(key, data) {
             data,
         }));
     } catch (e) {
-        console.warn("Oraculum cache write failed:", e);
+        console.warn("Cache write failed:", e);
         // Best-effort eviction: if we hit quota, dump the oldest cache entries
         if (e?.name === "QuotaExceededError") {
             try { evictOldest(20); localStorage.setItem(PREFIX + key, JSON.stringify({ cachedAt: new Date().toISOString(), data })); } catch {}
