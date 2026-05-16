@@ -99,7 +99,7 @@ The system defaults to **CZK** as the display currency. To change it, open `Syst
 
 Individual entries can be logged in any of three currencies (your base + EUR + USD). The "⟳ Fetch rates" button auto-updates the exchange rates from ECB via [Frankfurter](https://www.frankfurter.app).
 
-## Setup
+## Vault Setup
 
 > ⚠️ **Datacore is required.** This vault uses [Datacore](https://github.com/blacksmithgu/datacore) exclusively for all dashboards - not Dataview. Install it first or nothing will render.
 
