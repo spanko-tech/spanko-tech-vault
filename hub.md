@@ -20,6 +20,7 @@ tags:
 screenshots:
   - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/preview.png
   - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/screenshot-home.png
+  - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/screenshot-home-mobile.png
   - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/screenshot-oraculum-chat.png
   - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/screenshot-oraculum-research.png
   - https://raw.githubusercontent.com/spanko-tech/spanko-tech-vault/main/Documentation/Screenshots/screenshot-cogito.png
@@ -88,6 +89,8 @@ Oraculum is an AI assistant embedded directly in the vault as a Datacore dashboa
 **Semantic search** is powered by `text-embedding-004` (768-dimensional embeddings). Trigger indexing from the Oraculum settings panel - once built, it can find conceptually related notes even with zero keyword overlap. Datacore's built-in metadata indexing means the embeddings layer sits on top of already-fast vault queries.
 
 **Deep Research** is the more powerful mode - it uses Gemini 2.5 Flash with Google Search grounding to research topics across the web, synthesize findings, and save structured results back into the vault. Results are stored per-topic and can be recalled in future conversations without re-running the research.
+
+> **Mobile:** The Home dashboard has a dedicated mobile layout - news feeds, habit logging, finances, weather, and quotes all work on phone. Most other dashboards are usable on mobile too, though designed primarily for desktop.
 
 ### Setup
 

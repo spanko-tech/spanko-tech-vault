@@ -35,6 +35,10 @@ All dashboard code is built with [Datacore](https://github.com/blacksmithgu/data
 
 ![Home Dashboard](Documentation/Screenshots/screenshot-home.png)
 
+**Home Dashboard - Mobile** - dedicated responsive layout at <700px with tabbed news feeds, quick habit logging, and macro tracking.
+
+![Home Mobile](Documentation/Screenshots/screenshot-home-mobile.png)
+
 **Oraculum** - chat with your vault. 60+ tools, thinking steps visible, deep research with Google Search grounding.
 
 ![Oraculum Chat](Documentation/Screenshots/screenshot-oraculum-chat.png)
@@ -75,6 +79,9 @@ Oraculum is an AI assistant embedded directly in the vault as a Datacore dashboa
 **Deep Research** is the more powerful mode - it uses Gemini 2.5 Flash with Google Search grounding to research topics across the web, synthesize findings, and save structured results back into the vault. Results are stored per-topic and can be recalled in future conversations without re-running the research. This is best used by chatting with Oraculum for a while, letting it build a queue of topics and then batching that research with one call.
 
 In theory with Datacore and Semantic Indexing the vault should scale very well knowledge wise while still being blazingly fast.
+
+> **Mobile:** The Home dashboard has a dedicated mobile layout (responsive at 700px) - news feeds, habit logging, finances, weather, and quotes all work on phone. Most other dashboards are usable on mobile too, though they're designed primarily for desktop width.
+
 ### Setup
 
 Oraculum needs a [Gemini API key](https://aistudio.google.com/apikeys) to work. The key is stored in browser `localStorage` only - never written to disk or committed.
